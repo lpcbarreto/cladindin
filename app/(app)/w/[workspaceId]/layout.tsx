@@ -7,6 +7,8 @@ import { Logo } from "@/components/logo";
 const NAV = [
   { href: "dashboard", label: "Início" },
   { href: "lancamentos", label: "Lançamentos" },
+  { href: "a-pagar", label: "A pagar/receber" },
+  { href: "recorrencias", label: "Recorrências" },
   { href: "importar", label: "Importar" },
   { href: "importacoes", label: "Importações" },
   { href: "cartoes", label: "Cartões" },

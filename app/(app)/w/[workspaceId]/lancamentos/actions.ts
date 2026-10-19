@@ -145,6 +145,8 @@ export async function updateTransaction(_prev: FormState, form: FormData): Promi
       notes: v.notes,
       due_date: v.dueDate,
       competence_date: v.competenceDate || v.dueDate,
+      // Editar uma ocorrência de recorrência a desvincula (a regra não a sobrescreve mais)
+      recurrence_detached: true,
       status: v.status,
       paid_date: paidDate,
       category_id: v.categoryId,
