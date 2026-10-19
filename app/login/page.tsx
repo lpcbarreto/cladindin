@@ -30,12 +30,12 @@ export default async function LoginPage({
       </div>
       <section className="relative hidden overflow-hidden bg-primary p-12 text-primary-fg lg:flex lg:flex-col lg:justify-between">
         <div className="flex items-center gap-2 text-2xl font-extrabold tracking-tight">
-          <span className="rounded-full bg-primary-fg/15 p-1">
+          <span className="coin-hover rounded-full bg-primary-fg/15 p-1">
             <LogoMark size={36} />
           </span>
           cladindin
         </div>
-        <div className="relative z-10 max-w-md space-y-6">
+        <div className="stagger relative z-10 max-w-md space-y-6">
           <h1 className="text-4xl leading-tight font-extrabold">Seu dindin organizado, sem planilha e sem susto.</h1>
           <ul className="space-y-3 text-base">
             {HIGHLIGHTS.map((h) => (
@@ -48,12 +48,12 @@ export default async function LoginPage({
         </div>
         <p className="relative z-10 text-sm opacity-75">Finanças pessoais e da sua pequena empresa.</p>
         {/* Moedas decorativas */}
-        <div aria-hidden="true" className="pointer-events-none absolute -right-24 -bottom-24 h-96 w-96 rounded-full border-[28px] border-primary-fg/10" />
-        <div aria-hidden="true" className="pointer-events-none absolute top-24 -right-10 h-40 w-40 rounded-full bg-accent/25" />
+        <div aria-hidden="true" className="drift pointer-events-none absolute -right-24 -bottom-24 h-96 w-96 rounded-full border-[28px] border-primary-fg/10" />
+        <div aria-hidden="true" className="coin-float pointer-events-none absolute top-24 -right-10 h-40 w-40 rounded-full bg-accent/25" />
       </section>
 
       <section className="flex items-center justify-center px-4 py-10">
-        <div className="w-full max-w-sm space-y-6">
+        <div className="page-enter w-full max-w-sm space-y-6">
           <div className="lg:hidden">
             <Logo size={40} />
           </div>

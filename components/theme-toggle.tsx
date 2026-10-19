@@ -30,7 +30,12 @@ function readTheme(): Theme {
 
 function apply(theme: Theme) {
   const dark = theme === "dark" || (theme === "system" && matchMedia("(prefers-color-scheme: dark)").matches);
-  document.documentElement.classList.toggle("dark", dark);
+  const root = document.documentElement;
+  if (root.classList.contains("dark") === dark) return;
+  // Transição de cores só durante a troca (não pesa no resto da navegação)
+  root.classList.add("theme-transition");
+  root.classList.toggle("dark", dark);
+  window.setTimeout(() => root.classList.remove("theme-transition"), 400);
 }
 
 /** Seletor de tema: Claro, Escuro ou seguir o sistema. A escolha fica salva no navegador. */

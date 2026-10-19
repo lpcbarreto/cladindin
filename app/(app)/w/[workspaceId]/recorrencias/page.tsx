@@ -87,7 +87,7 @@ export default async function RecurrencesPage({
         <section className="card space-y-3">
           <h2 className="font-bold">Parece recorrente</h2>
           <p className="text-sm text-muted">Encontramos cobranças que se repetem todo mês. Crie a regra com um clique para prever os próximos meses.</p>
-          <ul className="grid gap-2 md:grid-cols-2">
+          <ul className="stagger grid gap-2 md:grid-cols-2">
             {suggestions.map((s) => {
               const q = new URLSearchParams({
                 nova: "1",
@@ -127,7 +127,7 @@ export default async function RecurrencesPage({
         </details>
       )}
 
-      <div className="space-y-3">
+      <div className="stagger space-y-3">
         {rules.map((r) => {
           const next = r.status === "active" ? occurrences(toRule(r), today, addDays(today, 800), 3) : [];
           const [label, cls] = STATUS[r.status];

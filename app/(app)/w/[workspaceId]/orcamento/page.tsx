@@ -63,7 +63,7 @@ export default async function BudgetPage({
         </div>
       )}
 
-      <div className="card divide-y divide-border p-0">
+      <div className="card stagger divide-y divide-border p-0">
         {rows.map((r) => {
           const st = STATUS[budgetStatus(r)];
           const used = r.spent + r.planned;
@@ -93,8 +93,8 @@ export default async function BudgetPage({
               {r.budget && (
                 <div className="relative h-2 overflow-hidden rounded-full bg-surface-2" role="img" aria-label={`${Math.round((used / r.budget) * 100)}% do orçamento usado`}>
                   {/* Previsto em tom claro, realizado sólido */}
-                  <div className={`absolute inset-y-0 left-0 rounded-full opacity-40 ${st.bar}`} style={{ width: `${pct}%` }} />
-                  <div className={`absolute inset-y-0 left-0 rounded-full ${st.bar}`} style={{ width: `${spentPct}%` }} />
+                  <div className={`bar-grow absolute inset-y-0 left-0 rounded-full opacity-40 ${st.bar}`} style={{ width: `${pct}%` }} />
+                  <div className={`bar-grow absolute inset-y-0 left-0 rounded-full ${st.bar}`} style={{ width: `${spentPct}%` }} />
                 </div>
               )}
             </div>

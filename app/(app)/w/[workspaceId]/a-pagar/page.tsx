@@ -99,13 +99,13 @@ export default async function PayablesPage({
         </div>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="stagger grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
         {GROUPS.map((g) => {
           const list = rows.filter((r) => groupOf(r.due_date) === g.key);
           const inv = (invoices ?? []).filter((i) => groupOf(i.due_date) === g.key);
           const sum = total(list) + inv.reduce((a, i) => a + Number(i.total_cents), 0);
           return (
-            <a key={g.key} href={`#${g.key}`} className={`card p-4 ${g.key === "atrasados" && sum > 0 ? "border-danger/40 bg-danger-soft" : ""}`}>
+            <a key={g.key} href={`#${g.key}`} className={`card lift p-4 ${g.key === "atrasados" && sum > 0 ? "border-danger/40 bg-danger-soft" : ""}`}>
               <p className="text-xs font-semibold text-muted">{g.label}</p>
               <p className={`text-xl font-extrabold tabular-nums ${g.key === "atrasados" && sum > 0 ? "text-danger" : ""}`}>{formatBRL(sum)}</p>
               <p className="text-xs text-muted">{list.length + inv.length} item(ns)</p>

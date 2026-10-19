@@ -4,6 +4,7 @@ import { loadWorkspaceContext, hasRole } from "@/lib/workspace";
 import { formatBRL } from "@/lib/finance/money";
 import { formatDateBR, todayISO } from "@/lib/finance/dates";
 import { PayInvoiceForm } from "./pay-form";
+import { CountUp } from "@/components/count-up";
 import { undoInvoicePayment } from "../actions";
 import { ConfirmButton } from "@/components/confirm-button";
 
@@ -119,13 +120,13 @@ export default async function CardInvoicePage({
         </div>
       ) : (
         <>
-          <div className="grid gap-4 md:grid-cols-3">
+          <div className="stagger grid gap-4 md:grid-cols-3">
             <div className="rounded-[1.25rem] bg-primary p-5 text-primary-fg">
               <p className="text-sm font-semibold opacity-80">
                 Total da fatura ·{" "}
                 {current_.status === "paid" ? `paga em ${formatDateBR(current_.paid_at)}` : current_.status === "open" ? "aberta" : "fechada"}
               </p>
-              <p className="mt-1 text-3xl font-extrabold tabular-nums">{formatBRL(Number(current_.total_cents))}</p>
+              <CountUp key={current_.id} cents={Number(current_.total_cents)} className="mt-1 block text-3xl font-extrabold tabular-nums" />
               <p className="mt-2 text-xs opacity-80">
                 Período {formatDateBR(current_.period_start)} a {formatDateBR(current_.closing_date)}
               </p>

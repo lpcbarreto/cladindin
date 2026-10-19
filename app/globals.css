@@ -108,3 +108,197 @@ h1 {
 @utility card {
   @apply rounded-[1.25rem] border border-border bg-surface p-5 shadow-[0_1px_0_rgba(31,42,36,0.04),0_8px_24px_-12px_rgba(31,42,36,0.12)];
 }
+
+/* ---------------------------------------------------------------------------
+   Movimento: curto, suave e com propósito (orientar, confirmar, dar vida).
+   Tudo é desligado para quem pede "reduzir movimento" no sistema.
+--------------------------------------------------------------------------- */
+:root {
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes grow-x {
+  from {
+    transform: scaleX(0);
+  }
+}
+@keyframes coin-flip {
+  0% {
+    transform: rotateY(0);
+  }
+  100% {
+    transform: rotateY(360deg);
+  }
+}
+@keyframes coin-float {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-4deg);
+  }
+  50% {
+    transform: translateY(-10px) rotate(4deg);
+  }
+}
+@keyframes shimmer {
+  from {
+    background-position: -200% 0;
+  }
+  to {
+    background-position: 200% 0;
+  }
+}
+@keyframes drift {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(-14px, 10px) scale(1.04);
+  }
+}
+
+/* Entrada de página (o template remonta a cada navegação) */
+@utility page-enter {
+  animation: fade-up 420ms var(--ease-out) both;
+}
+
+/* Filhos entram em cascata */
+@utility stagger {
+  & > * {
+    animation: fade-up 480ms var(--ease-out) both;
+  }
+  & > *:nth-child(2) {
+    animation-delay: 50ms;
+  }
+  & > *:nth-child(3) {
+    animation-delay: 100ms;
+  }
+  & > *:nth-child(4) {
+    animation-delay: 150ms;
+  }
+  & > *:nth-child(5) {
+    animation-delay: 200ms;
+  }
+  & > *:nth-child(6) {
+    animation-delay: 250ms;
+  }
+  & > *:nth-child(n + 7) {
+    animation-delay: 300ms;
+  }
+}
+
+/* Cartões clicáveis levantam um pouco */
+@utility lift {
+  transition:
+    transform 220ms var(--ease-out),
+    box-shadow 220ms var(--ease-out),
+    border-color 220ms;
+  &:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 14px 30px -16px rgba(31, 42, 36, 0.28);
+  }
+  &:active {
+    transform: translateY(-1px);
+  }
+}
+
+/* Barras de progresso crescem da esquerda */
+@utility bar-grow {
+  transform-origin: left;
+  animation: grow-x 900ms var(--ease-out) both;
+}
+
+/* Mensagens de confirmação/erro aparecem com um "pop" */
+@utility msg-in {
+  animation: pop-in 260ms var(--ease-spring) both;
+}
+
+/* Esqueleto de carregamento com brilho */
+@utility skeleton {
+  background: linear-gradient(90deg, var(--surface-2) 25%, var(--border) 37%, var(--surface-2) 63%);
+  background-size: 400% 100%;
+  animation: shimmer 1.4s ease infinite;
+}
+
+/* Moeda do logo gira ao passar o mouse; no login, flutua */
+@utility coin-hover {
+  perspective: 400px;
+  & svg {
+    transition: transform 600ms var(--ease-spring);
+  }
+  &:hover svg {
+    animation: coin-flip 900ms var(--ease-out);
+  }
+}
+@utility coin-float {
+  animation: coin-float 5s ease-in-out infinite;
+}
+@utility drift {
+  animation: drift 12s ease-in-out infinite;
+}
+
+/* Conteúdo de <details> desliza ao abrir */
+details[open] > :not(summary) {
+  animation: fade-up 320ms var(--ease-out) both;
+}
+details > summary {
+  transition: color 160ms;
+}
+
+/* Linhas de tabela respondem ao hover */
+tbody tr {
+  transition: background-color 160ms;
+}
+
+/* Troca de tema suave (classe ligada só durante a troca) */
+html.theme-transition,
+html.theme-transition * {
+  transition:
+    background-color 320ms ease,
+    color 320ms ease,
+    border-color 320ms ease,
+    fill 320ms ease !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    animation-delay: 0ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Mensagens de retorno dos formulários (Salvo, erro…) entram com um "pop" */
+form :is(p, span).text-primary,
+form :is(p, span).text-danger {
+  animation: pop-in 260ms var(--ease-spring) both;
+}

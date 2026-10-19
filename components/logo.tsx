@@ -13,8 +13,10 @@ export function LogoMark({ size = 32, className = "" }: { size?: number; classNa
 
 export function Logo({ size = 32, className = "" }: { size?: number; className?: string }) {
   return (
-    <span className={`inline-flex items-center gap-2 ${className}`}>
-      <LogoMark size={size} />
+    <span className={`group inline-flex items-center gap-2 ${className}`}>
+      <span className="coin-hover inline-flex">
+        <LogoMark size={size} />
+      </span>
       <span className="font-extrabold tracking-tight" style={{ fontSize: size * 0.62 }}>
         cladin<span className="text-primary">din</span>
       </span>

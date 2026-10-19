@@ -4,6 +4,7 @@ import { formatBRL } from "@/lib/finance/money";
 import { addDays, formatDateBR, monthRange, todayISO } from "@/lib/finance/dates";
 import { loadBudget } from "@/lib/budget-server";
 import { budgetStatus } from "@/lib/finance/budget";
+import { CountUp } from "@/components/count-up";
 
 type Tx = {
   id: string;
@@ -110,24 +111,24 @@ export default async function DashboardPage({ params }: { params: Promise<{ work
         <h1 className="text-3xl font-extrabold tracking-tight">Olá! Veja como está o seu dindin 👋</h1>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="stagger grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {kpis.map((k, i) =>
           i === 0 ? (
             <div key={k.label} className="relative overflow-hidden rounded-[1.25rem] bg-primary p-5 text-primary-fg shadow-sm">
               <p className="text-sm font-semibold opacity-80">{k.label}</p>
-              <p className="mt-1 text-2xl font-extrabold tabular-nums">{formatBRL(k.value)}</p>
+              <p className="mt-1 text-2xl font-extrabold tabular-nums"><CountUp cents={k.value} /></p>
               <div aria-hidden="true" className="absolute -right-8 -bottom-10 h-28 w-28 rounded-full border-[14px] border-primary-fg/10" />
             </div>
           ) : (
             <div key={k.label} className="card">
               <p className="text-sm font-semibold text-muted">{k.label}</p>
-              <p className={`mt-1 text-2xl font-extrabold tabular-nums ${k.tone}`}>{formatBRL(k.value)}</p>
+              <p className={`mt-1 text-2xl font-extrabold tabular-nums ${k.tone}`}><CountUp cents={k.value} /></p>
             </div>
           ),
         )}
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-3">
+      <div className="stagger grid gap-4 lg:grid-cols-3">
         <section className="card space-y-3">
           <h2 className="font-medium">A pagar e a receber</h2>
           <dl className="grid grid-cols-2 gap-y-2 text-sm">
@@ -195,7 +196,7 @@ export default async function DashboardPage({ params }: { params: Promise<{ work
                     <span className="tabular-nums">{formatBRL(value)}</span>
                   </div>
                   <div className="mt-1 h-1.5 rounded-full bg-surface-2">
-                    <div className="h-1.5 rounded-full" style={{ width: `${(value / topMax) * 100}%`, background: "var(--series-expense)" }} />
+                    <div className="bar-grow h-1.5 rounded-full" style={{ width: `${(value / topMax) * 100}%`, background: "var(--series-expense)" }} />
                   </div>
                 </li>
               ))}
@@ -212,7 +213,7 @@ export default async function DashboardPage({ params }: { params: Promise<{ work
               Ver orçamento
             </Link>
           </div>
-          <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          <ul className="stagger grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
             {budgetAlerts.map((b) => {
               const used = b.spent + b.planned;
               const over = used > (b.budget ?? 0);
