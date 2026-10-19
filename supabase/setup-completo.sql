@@ -1,19 +1,9 @@
--- Cladindin: instalação completa (Fase 1 + Fase 2).
--- Cole TUDO no SQL Editor do Supabase e clique em Run.
--- O bloco abaixo apaga restos de tentativas anteriores (não toca nos usuários).
+-- Cladindin: instalação completa para um banco NOVO (todas as migrations, em ordem).
+-- Cole tudo no SQL Editor do Supabase e clique em Run. Em banco que já tem o Cladindin,
+-- aplique só as migrations que faltam (supabase/migrations).
 
-drop trigger if exists on_auth_user_created on auth.users;
-drop view if exists public.account_balances;
-drop table if exists public.transaction_tags, public.transactions, public.contacts, public.tags,
-  public.cost_centers, public.categories, public.credit_cards, public.accounts, public.audit_log,
-  public.invites, public.workspace_members, public.workspaces, public.profiles cascade;
-drop function if exists public.handle_new_user, public.create_workspace, public.accept_invite,
-  public.is_member, public.role_rank, public.touch_updated_at, public.audit_trigger,
-  public.check_same_workspace, public.stamp_actor, public.create_transfer,
-  public.seed_default_categories, public.on_workspace_created cascade;
-drop type if exists public.member_role, public.account_type, public.category_kind,
-  public.tx_type, public.tx_status, public.tx_origin cascade;
 
+-- ===== 20261019000001_fase1_workspaces.sql =====
 -- Fase 1: workspaces, membros, convites, auditoria e RLS
 create extension if not exists pgcrypto;
 
@@ -215,6 +205,7 @@ create policy invites_delete on public.invites for delete using (public.is_membe
 
 create policy audit_select on public.audit_log for select using (public.is_member(workspace_id, 'admin'));
 
+-- ===== 20261019000002_fase2_cadastros_lancamentos.sql =====
 -- Fase 2: contas, cartões, categorias, contatos, tags, centros de custo e lançamentos
 
 create type public.account_type as enum ('checking', 'savings', 'cash', 'investment', 'credit_card');
@@ -497,15 +488,989 @@ begin
   end loop;
 end $$;
 
--- Usuários que já existiam antes da instalação ganham perfil e workspace "Pessoal"
-do $$
-declare u record; ws uuid;
+-- ===== 20261019000003_fase3_importacao.sql =====
+-- Fase 3: importação de extratos (OFX), deduplicação, conciliação e desfazer
+
+create table public.import_batches (
+  id uuid primary key default gen_random_uuid(),
+  workspace_id uuid not null references public.workspaces (id) on delete cascade,
+  account_id uuid not null references public.accounts (id) on delete cascade,
+  file_name text not null,
+  file_hash text not null,
+  parser text not null,
+  total_rows int not null default 0,
+  new_rows int not null default 0,
+  duplicate_rows int not null default 0,
+  reconciled_rows int not null default 0,
+  statement_balance_cents bigint,
+  statement_balance_date date,
+  created_by uuid references auth.users (id) default auth.uid(),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  undone_at timestamptz,
+  undone_by uuid references auth.users (id)
+);
+create index import_batches_ws_idx on public.import_batches (workspace_id, created_at desc);
+create index import_batches_hash_idx on public.import_batches (account_id, file_hash);
+
+-- Vínculo BANKID/ACCTID do arquivo → conta do sistema, para detectar a conta nas próximas vezes
+create table public.account_import_links (
+  id uuid primary key default gen_random_uuid(),
+  workspace_id uuid not null references public.workspaces (id) on delete cascade,
+  account_id uuid not null references public.accounts (id) on delete cascade,
+  bank_id text not null default '',
+  external_account_id text not null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (workspace_id, bank_id, external_account_id)
+);
+
+alter table public.transactions
+  add constraint transactions_import_batch_fk foreign key (import_batch_id) references public.import_batches (id) on delete set null,
+  add column reconciled_import_batch_id uuid references public.import_batches (id) on delete set null,
+  add column statement_description text;
+
+create index tx_import_batch_idx on public.transactions (import_batch_id) where import_batch_id is not null;
+create index tx_reconciled_batch_idx on public.transactions (reconciled_import_batch_id) where reconciled_import_batch_id is not null;
+create index tx_account_fingerprint_idx on public.transactions (account_id, fingerprint) where deleted_at is null;
+
+create trigger import_batches_touch before update on public.import_batches for each row execute function public.touch_updated_at();
+create trigger import_links_touch before update on public.account_import_links for each row execute function public.touch_updated_at();
+
+alter table public.import_batches enable row level security;
+alter table public.account_import_links enable row level security;
+create policy import_batches_select on public.import_batches for select using (public.is_member(workspace_id));
+create policy import_batches_insert on public.import_batches for insert with check (public.is_member(workspace_id, 'editor'));
+create policy import_batches_update on public.import_batches for update
+  using (public.is_member(workspace_id, 'editor')) with check (public.is_member(workspace_id, 'editor'));
+create policy import_links_select on public.account_import_links for select using (public.is_member(workspace_id));
+create policy import_links_write on public.account_import_links for all
+  using (public.is_member(workspace_id, 'editor')) with check (public.is_member(workspace_id, 'editor'));
+
+/*
+  Grava uma importação de forma atômica. p_rows: array de objetos
+  { date, amount_cents (com sinal), description, external_id, fingerprint, category_id, reconcile_tx_id }
+  - reconcile_tx_id: marca o previsto como pago em vez de criar um novo
+  - linhas cujo FITID ou fingerprint já existam na conta são ignoradas (nunca duplica)
+  Roda como o usuário (security invoker): o RLS continua valendo.
+*/
+create or replace function public.commit_import(
+  p_workspace_id uuid,
+  p_account_id uuid,
+  p_file_name text,
+  p_file_hash text,
+  p_parser text,
+  p_total_rows int,
+  p_balance_cents bigint,
+  p_balance_date date,
+  p_bank_id text,
+  p_external_account_id text,
+  p_rows jsonb
+) returns jsonb language plpgsql security invoker set search_path = public as $$
+declare
+  b uuid;
+  r jsonb;
+  amt bigint;
+  ext text;
+  fp text;
+  n_new int := 0;
+  n_dup int := 0;
+  n_rec int := 0;
+  hit int;
 begin
-  for u in select id, raw_user_meta_data from auth.users where id not in (select id from public.profiles) loop
-    insert into public.profiles (id, full_name) values (u.id, u.raw_user_meta_data ->> 'full_name');
-    insert into public.workspaces (name, kind, created_by) values ('Pessoal', 'pf', u.id) returning id into ws;
-    insert into public.workspace_members (workspace_id, user_id, role) values (ws, u.id, 'owner');
+  if not public.is_member(p_workspace_id, 'editor') then
+    raise exception 'Você não tem permissão para importar neste workspace.';
+  end if;
+  if not exists (select 1 from accounts where id = p_account_id and workspace_id = p_workspace_id) then
+    raise exception 'Conta inválida.';
+  end if;
+
+  insert into import_batches (workspace_id, account_id, file_name, file_hash, parser, total_rows, statement_balance_cents, statement_balance_date)
+  values (p_workspace_id, p_account_id, left(p_file_name, 200), p_file_hash, p_parser, p_total_rows, p_balance_cents, p_balance_date)
+  returning id into b;
+
+  if p_external_account_id is not null and p_external_account_id <> '' then
+    insert into account_import_links (workspace_id, account_id, bank_id, external_account_id)
+    values (p_workspace_id, p_account_id, coalesce(p_bank_id, ''), p_external_account_id)
+    on conflict (workspace_id, bank_id, external_account_id) do update set account_id = excluded.account_id;
+  end if;
+
+  for r in select * from jsonb_array_elements(p_rows) loop
+    amt := (r ->> 'amount_cents')::bigint;
+    ext := nullif(r ->> 'external_id', '');
+    fp := r ->> 'fingerprint';
+    if amt is null or amt = 0 or fp is null then continue; end if;
+
+    -- Já importado? (FITID ou fingerprint na mesma conta)
+    select count(*) into hit from transactions
+    where account_id = p_account_id and deleted_at is null
+      and ((ext is not null and external_id = ext) or fingerprint = fp);
+    if hit > 0 then
+      n_dup := n_dup + 1;
+      continue;
+    end if;
+
+    if nullif(r ->> 'reconcile_tx_id', '') is not null then
+      update transactions set
+        status = 'paid',
+        paid_date = (r ->> 'date')::date,
+        amount_cents = abs(amt),
+        external_id = ext,
+        fingerprint = fp,
+        statement_description = left(r ->> 'description', 300),
+        reconciled = true,
+        reconciled_import_batch_id = b
+      where id = (r ->> 'reconcile_tx_id')::uuid
+        and workspace_id = p_workspace_id and account_id = p_account_id
+        and status = 'planned' and deleted_at is null
+        and sign(direction) = sign(amt);
+      get diagnostics hit = row_count;
+      if hit = 1 then
+        n_rec := n_rec + 1;
+        continue;
+      end if;
+    end if;
+
+    insert into transactions (
+      workspace_id, account_id, type, direction, amount_cents, description, statement_description,
+      competence_date, due_date, paid_date, status, category_id, origin, import_batch_id,
+      external_id, fingerprint, reconciled
+    ) values (
+      p_workspace_id, p_account_id,
+      case when amt > 0 then 'income'::tx_type else 'expense'::tx_type end,
+      sign(amt)::smallint, abs(amt), left(r ->> 'description', 300), left(r ->> 'description', 300),
+      (r ->> 'date')::date, (r ->> 'date')::date, (r ->> 'date')::date, 'paid',
+      nullif(r ->> 'category_id', '')::uuid, 'import', b, ext, fp, true
+    );
+    n_new := n_new + 1;
   end loop;
+
+  update import_batches set new_rows = n_new, duplicate_rows = n_dup, reconciled_rows = n_rec where id = b;
+  return jsonb_build_object('batch_id', b, 'new', n_new, 'duplicates', n_dup, 'reconciled', n_rec);
 end $$;
+
+-- Desfaz uma importação: remove os criados e devolve os conciliados ao estado "previsto"
+create or replace function public.undo_import(p_batch_id uuid)
+returns jsonb language plpgsql security invoker set search_path = public as $$
+declare
+  ws uuid;
+  n_del int;
+  n_rev int;
+begin
+  select workspace_id into ws from import_batches where id = p_batch_id and undone_at is null;
+  if ws is null then raise exception 'Importação não encontrada ou já desfeita.'; end if;
+  if not public.is_member(ws, 'editor') then raise exception 'Você não tem permissão.'; end if;
+
+  update transactions set deleted_at = now()
+  where import_batch_id = p_batch_id and deleted_at is null;
+  get diagnostics n_del = row_count;
+
+  update transactions set
+    status = 'planned', paid_date = null, external_id = null, fingerprint = null,
+    statement_description = null, reconciled = false, reconciled_import_batch_id = null
+  where reconciled_import_batch_id = p_batch_id;
+  get diagnostics n_rev = row_count;
+
+  update import_batches set undone_at = now(), undone_by = auth.uid() where id = p_batch_id;
+  return jsonb_build_object('removed', n_del, 'reverted', n_rev);
+end $$;
+
+-- Saldo realizado da conta numa data (para conferir com o saldo do extrato)
+create or replace function public.account_balance_at(p_account_id uuid, p_date date)
+returns bigint language sql stable security invoker set search_path = public as $$
+  select a.initial_balance_cents + coalesce((
+    select sum(t.direction * t.amount_cents) from transactions t
+    where t.account_id = a.id and t.status = 'paid' and t.deleted_at is null and t.paid_date <= p_date
+  ), 0)
+  from accounts a where a.id = p_account_id
+$$;
+
+notify pgrst, 'reload schema';
+
+-- ===== 20261019000004_fase4_faturas_parcelas.sql =====
+-- Fase 4: faturas de cartão, parcelamentos, estornos e modelos de importação CSV
+
+-- Estornos/créditos de cartão são despesa com sinal positivo (reduzem o gasto, não viram receita)
+alter table public.transactions drop constraint tx_direction_matches_type;
+alter table public.transactions add constraint tx_direction_matches_type check (
+  type = 'transfer' or (type = 'income' and direction = 1) or type = 'expense'
+);
+
+create type public.invoice_status as enum ('open', 'closed', 'paid');
+
+create table public.invoices (
+  id uuid primary key default gen_random_uuid(),
+  workspace_id uuid not null references public.workspaces (id) on delete cascade,
+  account_id uuid not null references public.accounts (id) on delete cascade,
+  period_start date not null,
+  closing_date date not null,
+  due_date date not null,
+  declared_total_cents bigint,
+  paid_at date,
+  payment_transfer_group_id uuid,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (account_id, due_date)
+);
+create index invoices_ws_idx on public.invoices (workspace_id, due_date);
+create trigger invoices_touch before update on public.invoices for each row execute function public.touch_updated_at();
+
+alter table public.transactions
+  add column invoice_id uuid references public.invoices (id) on delete set null,
+  add column cardholder text,
+  add column installment_key text;
+create index tx_invoice_idx on public.transactions (invoice_id) where invoice_id is not null;
+create index tx_installment_idx on public.transactions (account_id, installment_key) where installment_key is not null;
+
+-- Modelos de mapeamento de CSV, reconhecidos pela assinatura do cabeçalho
+create table public.import_templates (
+  id uuid primary key default gen_random_uuid(),
+  workspace_id uuid not null references public.workspaces (id) on delete cascade,
+  account_id uuid references public.accounts (id) on delete cascade,
+  name text not null,
+  header_signature text not null,
+  config jsonb not null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (workspace_id, header_signature)
+);
+create trigger import_templates_touch before update on public.import_templates for each row execute function public.touch_updated_at();
+
+alter table public.invoices enable row level security;
+alter table public.import_templates enable row level security;
+create policy invoices_select on public.invoices for select using (public.is_member(workspace_id));
+create policy invoices_write on public.invoices for all
+  using (public.is_member(workspace_id, 'editor')) with check (public.is_member(workspace_id, 'editor'));
+create policy import_templates_select on public.import_templates for select using (public.is_member(workspace_id));
+create policy import_templates_write on public.import_templates for all
+  using (public.is_member(workspace_id, 'editor')) with check (public.is_member(workspace_id, 'editor'));
+
+-- Datas da fatura --------------------------------------------------------
+
+create or replace function public.day_in_month(p_month date, p_day int)
+returns date language sql immutable as $$
+  select (date_trunc('month', p_month)::date
+          + (least(p_day, extract(day from (date_trunc('month', p_month) + interval '1 month - 1 day'))::int) - 1))
+$$;
+
+/** Fechamento e vencimento da fatura em que cai uma compra feita em p_date. */
+create or replace function public.invoice_dates_for_purchase(p_closing_day int, p_due_day int, p_date date,
+  out closing_date date, out due_date date)
+language plpgsql immutable as $$
+begin
+  closing_date := public.day_in_month(p_date, p_closing_day);
+  -- Compra no dia do fechamento ou depois entra na próxima fatura
+  if p_date >= closing_date then
+    closing_date := public.day_in_month((p_date + interval '1 month')::date, p_closing_day);
+  end if;
+  if p_due_day > p_closing_day then
+    due_date := public.day_in_month(closing_date, p_due_day);
+  else
+    due_date := public.day_in_month((closing_date + interval '1 month')::date, p_due_day);
+  end if;
+end $$;
+
+/** Busca ou cria a fatura do cartão com o vencimento informado. */
+create or replace function public.ensure_invoice(p_account_id uuid, p_due_date date)
+returns uuid language plpgsql security invoker set search_path = public as $$
+declare
+  inv uuid;
+  cc record;
+  closing date;
+begin
+  select id into inv from invoices where account_id = p_account_id and due_date = p_due_date;
+  if inv is not null then return inv; end if;
+  select c.closing_day, c.due_day, a.workspace_id into cc
+  from credit_cards c join accounts a on a.id = c.account_id where c.account_id = p_account_id;
+  if cc is null then raise exception 'Cartão sem dia de fechamento e vencimento configurados.'; end if;
+  closing := case when cc.due_day > cc.closing_day
+    then public.day_in_month(p_due_date, cc.closing_day)
+    else public.day_in_month((p_due_date - interval '1 month')::date, cc.closing_day) end;
+  insert into invoices (workspace_id, account_id, period_start, closing_date, due_date)
+  values (cc.workspace_id, p_account_id, (closing - interval '1 month' + interval '1 day')::date, closing, p_due_date)
+  on conflict (account_id, due_date) do nothing
+  returning id into inv;
+  if inv is null then
+    select id into inv from invoices where account_id = p_account_id and due_date = p_due_date;
+  end if;
+  return inv;
+end $$;
+
+create or replace function public.invoice_for_purchase(p_account_id uuid, p_date date)
+returns uuid language plpgsql security invoker set search_path = public as $$
+declare
+  cc record;
+  d record;
+begin
+  select closing_day, due_day into cc from credit_cards where account_id = p_account_id;
+  if cc is null then return null; end if;
+  select * into d from public.invoice_dates_for_purchase(cc.closing_day, cc.due_day, p_date);
+  return public.ensure_invoice(p_account_id, d.due_date);
+end $$;
+
+-- Toda compra lançada num cartão entra automaticamente na fatura certa
+create or replace function public.assign_invoice()
+returns trigger language plpgsql security invoker set search_path = public as $$
+declare
+  inv record;
+begin
+  if new.type = 'transfer' then return new; end if;
+  if not exists (select 1 from accounts where id = new.account_id and type = 'credit_card') then return new; end if;
+  if new.invoice_id is null then
+    new.invoice_id := public.invoice_for_purchase(new.account_id, new.competence_date);
+  end if;
+  if new.invoice_id is not null then
+    select due_date into inv from invoices where id = new.invoice_id;
+    new.due_date := inv.due_date;
+  end if;
+  return new;
+end $$;
+
+create trigger tx_assign_invoice before insert on public.transactions
+  for each row execute function public.assign_invoice();
+
+-- Resumo das faturas: total calculado pelas linhas
+create or replace view public.invoice_summaries with (security_invoker = true) as
+select i.*,
+  coalesce(-sum(t.direction * t.amount_cents) filter (where t.deleted_at is null and t.status <> 'cancelled'), 0) as total_cents,
+  count(t.id) filter (where t.deleted_at is null and t.status <> 'cancelled') as items,
+  case when i.paid_at is not null then 'paid'::invoice_status
+       when current_date >= i.closing_date then 'closed'::invoice_status
+       else 'open'::invoice_status end as status
+from public.invoices i
+left join public.transactions t on t.invoice_id = i.id and t.type <> 'transfer'
+group by i.id;
+
+-- Pagamento da fatura = transferência da conta para o cartão (não é despesa)
+create or replace function public.pay_invoice(p_invoice_id uuid, p_from_account uuid, p_amount_cents bigint, p_date date)
+returns uuid language plpgsql security invoker set search_path = public as $$
+declare
+  inv invoices;
+  g uuid;
+begin
+  select * into inv from invoices where id = p_invoice_id;
+  if inv.id is null then raise exception 'Fatura não encontrada.'; end if;
+  if p_amount_cents <= 0 then raise exception 'Informe um valor maior que zero.'; end if;
+  g := public.create_transfer(inv.workspace_id, p_from_account, inv.account_id, p_amount_cents, p_date,
+    'Pagamento fatura ' || to_char(inv.due_date, 'MM/YYYY'), true);
+  update invoices set paid_at = p_date, payment_transfer_group_id = g where id = inv.id;
+  return g;
+end $$;
+
+-- Parcelamento manual: N parcelas mensais (centavos de ajuste na última)
+create or replace function public.create_installments(
+  p_workspace_id uuid, p_account_id uuid, p_type tx_type, p_total_cents bigint, p_count int,
+  p_first_date date, p_description text, p_category_id uuid, p_contact_id uuid, p_first_paid boolean default false
+) returns uuid language plpgsql security invoker set search_path = public as $$
+declare
+  g uuid := gen_random_uuid();
+  base bigint;
+  amt bigint;
+  is_card boolean;
+  first_inv uuid;
+  first_due date;
+  d date;
+  i int;
+begin
+  if p_count < 2 or p_count > 120 then raise exception 'Use de 2 a 120 parcelas.'; end if;
+  if p_total_cents < p_count then raise exception 'Valor pequeno demais para parcelar.'; end if;
+  if p_type = 'transfer' then raise exception 'Transferências não podem ser parceladas.'; end if;
+  base := p_total_cents / p_count;
+  select type = 'credit_card' into is_card from accounts where id = p_account_id and workspace_id = p_workspace_id;
+  if is_card is null then raise exception 'Conta inválida.'; end if;
+  if is_card then
+    first_inv := public.invoice_for_purchase(p_account_id, p_first_date);
+    select due_date into first_due from invoices where id = first_inv;
+  end if;
+
+  for i in 1..p_count loop
+    amt := case when i = p_count then p_total_cents - base * (p_count - 1) else base end;
+    d := (p_first_date + make_interval(months => i - 1))::date;
+    insert into transactions (
+      workspace_id, account_id, type, direction, amount_cents, description, competence_date, due_date,
+      paid_date, status, category_id, contact_id, origin, installment_group_id, installment_number,
+      installment_total, invoice_id
+    ) values (
+      p_workspace_id, p_account_id, p_type, case when p_type = 'income' then 1 else -1 end, amt,
+      left(p_description, 280) || ' (' || i || '/' || p_count || ')', d, d,
+      -- No cartão a 1ª parcela já está na fatura atual; as demais ficam previstas nas próximas
+      case when i = 1 and (is_card or p_first_paid) then d end,
+      case when i = 1 and (is_card or p_first_paid) then 'paid'::tx_status else 'planned'::tx_status end,
+      p_category_id, p_contact_id, 'installment', g, i, p_count,
+      case when is_card then public.ensure_invoice(p_account_id, (first_due + make_interval(months => i - 1))::date) end
+    );
+  end loop;
+  return g;
+end $$;
+
+/*
+  commit_import v2: além da v1 (dedupe, conciliação), trata cartão e parcelas.
+  Campos extras por linha: cardholder, installment_number, installment_total, installment_key.
+  p_invoice_due_date: vencimento da fatura importada (cartão). Linhas vão para essa fatura e as
+  parcelas futuras são projetadas nas faturas seguintes como previstas.
+*/
+drop function if exists public.commit_import(uuid, uuid, text, text, text, int, bigint, date, text, text, jsonb);
+
+create or replace function public.commit_import(
+  p_workspace_id uuid,
+  p_account_id uuid,
+  p_file_name text,
+  p_file_hash text,
+  p_parser text,
+  p_total_rows int,
+  p_balance_cents bigint,
+  p_balance_date date,
+  p_bank_id text,
+  p_external_account_id text,
+  p_rows jsonb,
+  p_invoice_due_date date default null,
+  p_declared_total_cents bigint default null
+) returns jsonb language plpgsql security invoker set search_path = public as $$
+declare
+  b uuid;
+  r jsonb;
+  amt bigint;
+  ext text;
+  fp text;
+  is_card boolean;
+  inv uuid;
+  inv_due date;
+  n int;
+  t int;
+  k text;
+  grp uuid;
+  i int;
+  n_new int := 0;
+  n_dup int := 0;
+  n_rec int := 0;
+  n_proj int := 0;
+  hit int;
+  matched uuid;
+begin
+  if not public.is_member(p_workspace_id, 'editor') then
+    raise exception 'Você não tem permissão para importar neste workspace.';
+  end if;
+  select type = 'credit_card' into is_card from accounts where id = p_account_id and workspace_id = p_workspace_id;
+  if is_card is null then raise exception 'Conta inválida.'; end if;
+
+  if is_card and p_invoice_due_date is not null then
+    inv := public.ensure_invoice(p_account_id, p_invoice_due_date);
+    inv_due := p_invoice_due_date;
+    if p_declared_total_cents is not null then
+      update invoices set declared_total_cents = p_declared_total_cents where id = inv;
+    end if;
+  end if;
+
+  insert into import_batches (workspace_id, account_id, file_name, file_hash, parser, total_rows, statement_balance_cents, statement_balance_date)
+  values (p_workspace_id, p_account_id, left(p_file_name, 200), p_file_hash, p_parser, p_total_rows, p_balance_cents, p_balance_date)
+  returning id into b;
+
+  if p_external_account_id is not null and p_external_account_id <> '' then
+    insert into account_import_links (workspace_id, account_id, bank_id, external_account_id)
+    values (p_workspace_id, p_account_id, coalesce(p_bank_id, ''), p_external_account_id)
+    on conflict (workspace_id, bank_id, external_account_id) do update set account_id = excluded.account_id;
+  end if;
+
+  for r in select * from jsonb_array_elements(p_rows) loop
+    amt := (r ->> 'amount_cents')::bigint;
+    ext := nullif(r ->> 'external_id', '');
+    fp := r ->> 'fingerprint';
+    n := nullif(r ->> 'installment_number', '')::int;
+    t := nullif(r ->> 'installment_total', '')::int;
+    k := nullif(r ->> 'installment_key', '');
+    if amt is null or amt = 0 or fp is null then continue; end if;
+
+    select count(*) into hit from transactions
+    where account_id = p_account_id and deleted_at is null
+      and ((ext is not null and external_id = ext) or fingerprint = fp);
+    if hit > 0 then
+      n_dup := n_dup + 1;
+      continue;
+    end if;
+
+    -- Parcela já projetada por uma importação anterior: confirma a prevista
+    if k is not null and n is not null then
+      select id, installment_group_id into matched, grp from transactions
+      where account_id = p_account_id and installment_key = k and installment_number = n
+        and installment_total = t and status = 'planned' and deleted_at is null
+        and abs(amount_cents - abs(amt)) <= 2
+      order by due_date limit 1;
+      if matched is not null then
+        update transactions set status = 'paid', paid_date = (r ->> 'date')::date, external_id = ext,
+          fingerprint = fp, statement_description = left(r ->> 'description', 300), reconciled = true,
+          reconciled_import_batch_id = b, invoice_id = coalesce(inv, invoice_id),
+          due_date = coalesce(inv_due, due_date)
+        where id = matched;
+        n_rec := n_rec + 1;
+        continue;
+      end if;
+    end if;
+
+    if nullif(r ->> 'reconcile_tx_id', '') is not null then
+      update transactions set
+        status = 'paid', paid_date = (r ->> 'date')::date, amount_cents = abs(amt), external_id = ext,
+        fingerprint = fp, statement_description = left(r ->> 'description', 300), reconciled = true,
+        reconciled_import_batch_id = b
+      where id = (r ->> 'reconcile_tx_id')::uuid
+        and workspace_id = p_workspace_id and account_id = p_account_id
+        and status = 'planned' and deleted_at is null and sign(direction) = sign(amt);
+      get diagnostics hit = row_count;
+      if hit = 1 then
+        n_rec := n_rec + 1;
+        continue;
+      end if;
+    end if;
+
+    grp := null;
+    if k is not null and t is not null then
+      select installment_group_id into grp from transactions
+      where account_id = p_account_id and installment_key = k and installment_total = t
+        and installment_group_id is not null and deleted_at is null limit 1;
+      grp := coalesce(grp, gen_random_uuid());
+    end if;
+
+    insert into transactions (
+      workspace_id, account_id, type, direction, amount_cents, description, statement_description,
+      competence_date, due_date, paid_date, status, category_id, origin, import_batch_id,
+      external_id, fingerprint, reconciled, cardholder, invoice_id,
+      installment_group_id, installment_number, installment_total, installment_key
+    ) values (
+      p_workspace_id, p_account_id,
+      case when is_card or amt < 0 then 'expense'::tx_type else 'income'::tx_type end,
+      sign(amt)::smallint, abs(amt), left(r ->> 'description', 300), left(r ->> 'description', 300),
+      (r ->> 'date')::date, coalesce(inv_due, (r ->> 'date')::date), (r ->> 'date')::date, 'paid',
+      nullif(r ->> 'category_id', '')::uuid, 'import', b, ext, fp, true,
+      nullif(r ->> 'cardholder', ''), inv, grp, n, t, k
+    );
+    n_new := n_new + 1;
+
+    -- Projeta as parcelas seguintes como previstas nas próximas faturas
+    if grp is not null and n is not null and t is not null and n < t and amt < 0 then
+      for i in (n + 1)..t loop
+        if not exists (select 1 from transactions where installment_group_id = grp and installment_number = i and deleted_at is null) then
+          insert into transactions (
+            workspace_id, account_id, type, direction, amount_cents, description, competence_date, due_date,
+            status, category_id, origin, import_batch_id, cardholder, invoice_id,
+            installment_group_id, installment_number, installment_total, installment_key
+          ) values (
+            p_workspace_id, p_account_id, 'expense', -1, abs(amt),
+            left(regexp_replace(r ->> 'description', '\s*\(?\d{1,2}\s*(/|de)\s*\d{1,2}\)?\s*$', '', 'i'), 280) || ' (' || i || '/' || t || ')',
+            ((r ->> 'date')::date + make_interval(months => i - n))::date,
+            coalesce((inv_due + make_interval(months => i - n))::date, ((r ->> 'date')::date + make_interval(months => i - n))::date),
+            'planned', nullif(r ->> 'category_id', '')::uuid, 'installment', b, nullif(r ->> 'cardholder', ''),
+            case when is_card and inv_due is not null
+              then public.ensure_invoice(p_account_id, (inv_due + make_interval(months => i - n))::date) end,
+            grp, i, t, k
+          );
+          n_proj := n_proj + 1;
+        end if;
+      end loop;
+    end if;
+  end loop;
+
+  update import_batches set new_rows = n_new, duplicate_rows = n_dup, reconciled_rows = n_rec where id = b;
+  return jsonb_build_object('batch_id', b, 'new', n_new, 'duplicates', n_dup, 'reconciled', n_rec,
+    'projected', n_proj, 'invoice_id', inv);
+end $$;
+
+-- Desfazer também remove as parcelas projetadas pela importação (já cobertas por import_batch_id)
+notify pgrst, 'reload schema';
+
+-- ===== 20261019000005_fase5_recorrencias_baixas.sql =====
+-- Fase 5: recorrências, baixa (total/parcial, juros, multa, desconto) e comprovantes
+
+create type public.recurrence_frequency as enum ('daily', 'weekly', 'biweekly', 'monthly', 'bimonthly', 'quarterly', 'semiannual', 'yearly');
+create type public.recurrence_status as enum ('active', 'paused', 'ended');
+
+create table public.recurrence_rules (
+  id uuid primary key default gen_random_uuid(),
+  workspace_id uuid not null references public.workspaces (id) on delete cascade,
+  type public.tx_type not null,
+  account_id uuid not null references public.accounts (id) on delete cascade,
+  to_account_id uuid references public.accounts (id) on delete cascade,
+  amount_cents bigint not null check (amount_cents > 0),
+  variable_amount boolean not null default false,
+  description text not null check (char_length(description) between 1 and 200),
+  category_id uuid references public.categories (id) on delete set null,
+  contact_id uuid references public.contacts (id) on delete set null,
+  frequency public.recurrence_frequency not null default 'monthly',
+  interval_count int not null default 1 check (interval_count between 1 and 36),
+  day_mode text not null default 'fixed' check (day_mode in ('fixed', 'last', 'business')),
+  day int not null default 1 check (day between 1 and 31),
+  start_date date not null,
+  end_mode text not null default 'never' check (end_mode in ('never', 'until', 'count')),
+  until_date date,
+  occurrence_count int check (occurrence_count is null or occurrence_count between 1 and 1000),
+  weekend_adjust text not null default 'none' check (weekend_adjust in ('none', 'before', 'after')),
+  horizon_months int not null default 12 check (horizon_months between 1 and 36),
+  status public.recurrence_status not null default 'active',
+  generated_until date,
+  created_by uuid references auth.users (id) default auth.uid(),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  constraint recurrence_transfer_target check ((type = 'transfer') = (to_account_id is not null))
+);
+create index recurrence_rules_ws_idx on public.recurrence_rules (workspace_id, status);
+create trigger recurrence_rules_touch before update on public.recurrence_rules for each row execute function public.touch_updated_at();
+create trigger recurrence_rules_audit after insert or update or delete on public.recurrence_rules for each row execute function public.audit_trigger();
+
+alter table public.transactions
+  add constraint transactions_recurrence_fk foreign key (recurrence_id) references public.recurrence_rules (id) on delete set null,
+  add column recurrence_date date,
+  add column recurrence_detached boolean not null default false,
+  add column original_amount_cents bigint,
+  add column interest_cents bigint not null default 0 check (interest_cents >= 0),
+  add column fine_cents bigint not null default 0 check (fine_cents >= 0),
+  add column discount_cents bigint not null default 0 check (discount_cents >= 0),
+  add column parent_transaction_id uuid references public.transactions (id) on delete set null;
+
+-- Idempotência da geração: uma ocorrência (e lado da transferência) por data-base.
+-- Inclui excluídos de propósito: "excluir só esta" não é recriada pelo job.
+create unique index tx_recurrence_occurrence_uidx on public.transactions (recurrence_id, recurrence_date, direction);
+
+alter table public.recurrence_rules enable row level security;
+create policy recurrence_select on public.recurrence_rules for select using (public.is_member(workspace_id));
+create policy recurrence_write on public.recurrence_rules for all
+  using (public.is_member(workspace_id, 'editor')) with check (public.is_member(workspace_id, 'editor'));
+
+/*
+  Baixa de um lançamento previsto.
+  p_principal_cents: quanto do valor original está sendo quitado.
+  Juros e multa somam ao valor pago; desconto abate do saldo devedor.
+  Se principal + desconto < original, o restante vira um novo previsto (baixa parcial).
+*/
+create or replace function public.settle_transaction(
+  p_id uuid, p_paid_date date, p_principal_cents bigint, p_interest_cents bigint default 0,
+  p_fine_cents bigint default 0, p_discount_cents bigint default 0, p_account_id uuid default null
+) returns jsonb language plpgsql security invoker set search_path = public as $$
+declare
+  t transactions;
+  original bigint;
+  remaining bigint;
+  rest uuid;
+begin
+  select * into t from transactions where id = p_id and deleted_at is null for update;
+  if t.id is null then raise exception 'Lançamento não encontrado.'; end if;
+  if t.status <> 'planned' then raise exception 'Este lançamento já foi baixado ou cancelado.'; end if;
+  if t.type = 'transfer' then raise exception 'Use a baixa em massa para transferências.'; end if;
+  if p_principal_cents <= 0 then raise exception 'Informe o valor pago.'; end if;
+  if least(p_interest_cents, p_fine_cents, p_discount_cents) < 0 then raise exception 'Valores não podem ser negativos.'; end if;
+  original := t.amount_cents;
+  if p_principal_cents + p_discount_cents > original then
+    raise exception 'Valor pago mais desconto passa do valor do lançamento (%).', to_char(original / 100.0, 'FM999G999G990D00');
+  end if;
+  remaining := original - p_principal_cents - p_discount_cents;
+
+  update transactions set
+    status = 'paid',
+    paid_date = p_paid_date,
+    account_id = coalesce(p_account_id, account_id),
+    original_amount_cents = original,
+    amount_cents = p_principal_cents + p_interest_cents + p_fine_cents,
+    interest_cents = p_interest_cents,
+    fine_cents = p_fine_cents,
+    discount_cents = p_discount_cents,
+    recurrence_detached = recurrence_id is not null
+  where id = p_id;
+
+  if remaining > 0 then
+    insert into transactions (
+      workspace_id, account_id, type, direction, amount_cents, description, notes, competence_date, due_date,
+      status, category_id, contact_id, cost_center_id, origin, parent_transaction_id
+    ) values (
+      t.workspace_id, t.account_id, t.type, t.direction, remaining,
+      left(t.description, 280) || ' (saldo)', t.notes, t.competence_date, t.due_date,
+      'planned', t.category_id, t.contact_id, t.cost_center_id, t.origin, t.id
+    ) returning id into rest;
+  end if;
+  return jsonb_build_object('paid_cents', p_principal_cents + p_interest_cents + p_fine_cents, 'remaining_cents', remaining, 'remaining_id', rest);
+end $$;
+
+-- Comprovantes ------------------------------------------------------------
+
+create table public.attachments (
+  id uuid primary key default gen_random_uuid(),
+  workspace_id uuid not null references public.workspaces (id) on delete cascade,
+  transaction_id uuid not null references public.transactions (id) on delete cascade,
+  storage_path text not null unique,
+  file_name text not null,
+  size_bytes int not null check (size_bytes > 0 and size_bytes <= 10485760),
+  mime_type text not null,
+  created_by uuid references auth.users (id) default auth.uid(),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create index attachments_tx_idx on public.attachments (transaction_id);
+alter table public.attachments enable row level security;
+create policy attachments_select on public.attachments for select using (public.is_member(workspace_id));
+create policy attachments_insert on public.attachments for insert with check (public.is_member(workspace_id, 'editor'));
+create policy attachments_delete on public.attachments for delete using (public.is_member(workspace_id, 'editor'));
+
+-- Bucket privado; caminho = <workspace_id>/<transaction_id>/<arquivo>
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('comprovantes', 'comprovantes', false, 10485760,
+  array['application/pdf', 'image/jpeg', 'image/png', 'image/webp', 'image/heic'])
+on conflict (id) do nothing;
+
+create policy comprovantes_select on storage.objects for select to authenticated
+  using (bucket_id = 'comprovantes' and public.is_member(((storage.foldername(name))[1])::uuid));
+create policy comprovantes_insert on storage.objects for insert to authenticated
+  with check (bucket_id = 'comprovantes' and public.is_member(((storage.foldername(name))[1])::uuid, 'editor'));
+create policy comprovantes_delete on storage.objects for delete to authenticated
+  using (bucket_id = 'comprovantes' and public.is_member(((storage.foldername(name))[1])::uuid, 'editor'));
+
+notify pgrst, 'reload schema';
+
+-- ===== 20261019000006_fase6_regras.sql =====
+-- Fase 6: regras automáticas de categorização
+
+create table public.categorization_rules (
+  id uuid primary key default gen_random_uuid(),
+  workspace_id uuid not null references public.workspaces (id) on delete cascade,
+  name text not null check (char_length(name) between 1 and 80),
+  priority int not null default 100 check (priority between 0 and 1000),
+  operator text not null default 'contains' check (operator in ('contains', 'starts_with', 'equals', 'regex')),
+  pattern text not null check (char_length(pattern) between 1 and 200),
+  direction text not null default 'any' check (direction in ('any', 'in', 'out')),
+  amount_min_cents bigint check (amount_min_cents is null or amount_min_cents >= 0),
+  amount_max_cents bigint check (amount_max_cents is null or amount_max_cents >= 0),
+  account_id uuid references public.accounts (id) on delete cascade,
+  set_category_id uuid references public.categories (id) on delete set null,
+  set_contact_id uuid references public.contacts (id) on delete set null,
+  set_tag_ids uuid[] not null default '{}',
+  active boolean not null default true,
+  times_applied int not null default 0,
+  created_by uuid references auth.users (id) default auth.uid(),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  constraint rule_has_effect check (set_category_id is not null or set_contact_id is not null or cardinality(set_tag_ids) > 0)
+);
+create index categorization_rules_ws_idx on public.categorization_rules (workspace_id, priority);
+create trigger categorization_rules_touch before update on public.categorization_rules for each row execute function public.touch_updated_at();
+
+alter table public.categorization_rules enable row level security;
+create policy rules_select on public.categorization_rules for select using (public.is_member(workspace_id));
+create policy rules_write on public.categorization_rules for all
+  using (public.is_member(workspace_id, 'editor')) with check (public.is_member(workspace_id, 'editor'));
+
+-- Índice para relatórios por competência e por caixa
+create index if not exists tx_ws_competence_idx on public.transactions (workspace_id, competence_date) where deleted_at is null;
+create index if not exists tx_ws_paid_idx on public.transactions (workspace_id, paid_date) where deleted_at is null;
+
+notify pgrst, 'reload schema';
+
+-- ===== 20261019000007_fase7_orcamento_lgpd.sql =====
+-- Fase 7: orçamento por categoria, ajustes de parcelas e LGPD
+
+create table public.budgets (
+  id uuid primary key default gen_random_uuid(),
+  workspace_id uuid not null references public.workspaces (id) on delete cascade,
+  category_id uuid not null references public.categories (id) on delete cascade,
+  -- null = vale para todos os meses; preenchido = só aquele mês (AAAA-MM-01)
+  month date check (month is null or extract(day from month) = 1),
+  amount_cents bigint not null check (amount_cents > 0),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create unique index budgets_default_uidx on public.budgets (workspace_id, category_id) where month is null;
+create unique index budgets_month_uidx on public.budgets (workspace_id, category_id, month) where month is not null;
+create trigger budgets_touch before update on public.budgets for each row execute function public.touch_updated_at();
+alter table public.budgets enable row level security;
+create policy budgets_select on public.budgets for select using (public.is_member(workspace_id));
+create policy budgets_write on public.budgets for all
+  using (public.is_member(workspace_id, 'editor')) with check (public.is_member(workspace_id, 'editor'));
+
+-- Nome-base da parcela: "LOJA X - Parcela 3/10" → "LOJA X"
+create or replace function public.installment_base_description(p text)
+returns text language sql immutable as $$
+  select coalesce(nullif(trim(regexp_replace(regexp_replace(
+    p,
+    '\s*[-–]?\s*\(?\s*(parc(ela)?\.?\s*)?\d{1,2}\s*(/|de)\s*\d{1,2}\s*\)?\s*$',
+    '', 'i'),
+    '\s*[-–]?\s*parc(ela)?\.?\s*$', '', 'i')), ''), p)
+$$;
+
+-- Corrige descrições já projetadas ("... - Parcela (4/10)")
+update public.transactions
+set description = public.installment_base_description(regexp_replace(description, '\s*\(\d{1,2}/\d{1,2}\)\s*$', ''))
+  || ' (' || installment_number || '/' || installment_total || ')'
+where origin = 'installment' and installment_number is not null and description ~* 'parc';
+
+-- commit_import com o nome-base corrigido nas parcelas projetadas
+create or replace function public.commit_import(
+  p_workspace_id uuid,
+  p_account_id uuid,
+  p_file_name text,
+  p_file_hash text,
+  p_parser text,
+  p_total_rows int,
+  p_balance_cents bigint,
+  p_balance_date date,
+  p_bank_id text,
+  p_external_account_id text,
+  p_rows jsonb,
+  p_invoice_due_date date default null,
+  p_declared_total_cents bigint default null
+) returns jsonb language plpgsql security invoker set search_path = public as $$
+declare
+  b uuid;
+  r jsonb;
+  amt bigint;
+  ext text;
+  fp text;
+  is_card boolean;
+  inv uuid;
+  inv_due date;
+  n int;
+  t int;
+  k text;
+  grp uuid;
+  i int;
+  n_new int := 0;
+  n_dup int := 0;
+  n_rec int := 0;
+  n_proj int := 0;
+  hit int;
+  matched uuid;
+begin
+  if not public.is_member(p_workspace_id, 'editor') then
+    raise exception 'Você não tem permissão para importar neste workspace.';
+  end if;
+  select type = 'credit_card' into is_card from accounts where id = p_account_id and workspace_id = p_workspace_id;
+  if is_card is null then raise exception 'Conta inválida.'; end if;
+
+  if is_card and p_invoice_due_date is not null then
+    inv := public.ensure_invoice(p_account_id, p_invoice_due_date);
+    inv_due := p_invoice_due_date;
+    if p_declared_total_cents is not null then
+      update invoices set declared_total_cents = p_declared_total_cents where id = inv;
+    end if;
+  end if;
+
+  insert into import_batches (workspace_id, account_id, file_name, file_hash, parser, total_rows, statement_balance_cents, statement_balance_date)
+  values (p_workspace_id, p_account_id, left(p_file_name, 200), p_file_hash, p_parser, p_total_rows, p_balance_cents, p_balance_date)
+  returning id into b;
+
+  if p_external_account_id is not null and p_external_account_id <> '' then
+    insert into account_import_links (workspace_id, account_id, bank_id, external_account_id)
+    values (p_workspace_id, p_account_id, coalesce(p_bank_id, ''), p_external_account_id)
+    on conflict (workspace_id, bank_id, external_account_id) do update set account_id = excluded.account_id;
+  end if;
+
+  for r in select * from jsonb_array_elements(p_rows) loop
+    amt := (r ->> 'amount_cents')::bigint;
+    ext := nullif(r ->> 'external_id', '');
+    fp := r ->> 'fingerprint';
+    n := nullif(r ->> 'installment_number', '')::int;
+    t := nullif(r ->> 'installment_total', '')::int;
+    k := nullif(r ->> 'installment_key', '');
+    if amt is null or amt = 0 or fp is null then continue; end if;
+
+    select count(*) into hit from transactions
+    where account_id = p_account_id and deleted_at is null
+      and ((ext is not null and external_id = ext) or fingerprint = fp);
+    if hit > 0 then
+      n_dup := n_dup + 1;
+      continue;
+    end if;
+
+    -- Parcela já projetada por uma importação anterior: confirma a prevista
+    if k is not null and n is not null then
+      select id, installment_group_id into matched, grp from transactions
+      where account_id = p_account_id and installment_key = k and installment_number = n
+        and installment_total = t and status = 'planned' and deleted_at is null
+        and abs(amount_cents - abs(amt)) <= 2
+      order by due_date limit 1;
+      if matched is not null then
+        update transactions set status = 'paid', paid_date = (r ->> 'date')::date, external_id = ext,
+          fingerprint = fp, statement_description = left(r ->> 'description', 300), reconciled = true,
+          reconciled_import_batch_id = b, invoice_id = coalesce(inv, invoice_id),
+          due_date = coalesce(inv_due, due_date)
+        where id = matched;
+        n_rec := n_rec + 1;
+        continue;
+      end if;
+    end if;
+
+    if nullif(r ->> 'reconcile_tx_id', '') is not null then
+      update transactions set
+        status = 'paid', paid_date = (r ->> 'date')::date, amount_cents = abs(amt), external_id = ext,
+        fingerprint = fp, statement_description = left(r ->> 'description', 300), reconciled = true,
+        reconciled_import_batch_id = b
+      where id = (r ->> 'reconcile_tx_id')::uuid
+        and workspace_id = p_workspace_id and account_id = p_account_id
+        and status = 'planned' and deleted_at is null and sign(direction) = sign(amt);
+      get diagnostics hit = row_count;
+      if hit = 1 then
+        n_rec := n_rec + 1;
+        continue;
+      end if;
+    end if;
+
+    grp := null;
+    if k is not null and t is not null then
+      select installment_group_id into grp from transactions
+      where account_id = p_account_id and installment_key = k and installment_total = t
+        and installment_group_id is not null and deleted_at is null limit 1;
+      grp := coalesce(grp, gen_random_uuid());
+    end if;
+
+    insert into transactions (
+      workspace_id, account_id, type, direction, amount_cents, description, statement_description,
+      competence_date, due_date, paid_date, status, category_id, origin, import_batch_id,
+      external_id, fingerprint, reconciled, cardholder, invoice_id,
+      installment_group_id, installment_number, installment_total, installment_key
+    ) values (
+      p_workspace_id, p_account_id,
+      case when is_card or amt < 0 then 'expense'::tx_type else 'income'::tx_type end,
+      sign(amt)::smallint, abs(amt), left(r ->> 'description', 300), left(r ->> 'description', 300),
+      (r ->> 'date')::date, coalesce(inv_due, (r ->> 'date')::date), (r ->> 'date')::date, 'paid',
+      nullif(r ->> 'category_id', '')::uuid, 'import', b, ext, fp, true,
+      nullif(r ->> 'cardholder', ''), inv, grp, n, t, k
+    );
+    n_new := n_new + 1;
+
+    -- Projeta as parcelas seguintes como previstas nas próximas faturas
+    if grp is not null and n is not null and t is not null and n < t and amt < 0 then
+      for i in (n + 1)..t loop
+        if not exists (select 1 from transactions where installment_group_id = grp and installment_number = i and deleted_at is null) then
+          insert into transactions (
+            workspace_id, account_id, type, direction, amount_cents, description, competence_date, due_date,
+            status, category_id, origin, import_batch_id, cardholder, invoice_id,
+            installment_group_id, installment_number, installment_total, installment_key
+          ) values (
+            p_workspace_id, p_account_id, 'expense', -1, abs(amt),
+            left(public.installment_base_description(r ->> 'description'), 280) || ' (' || i || '/' || t || ')',
+            ((r ->> 'date')::date + make_interval(months => i - n))::date,
+            coalesce((inv_due + make_interval(months => i - n))::date, ((r ->> 'date')::date + make_interval(months => i - n))::date),
+            'planned', nullif(r ->> 'category_id', '')::uuid, 'installment', b, nullif(r ->> 'cardholder', ''),
+            case when is_card and inv_due is not null
+              then public.ensure_invoice(p_account_id, (inv_due + make_interval(months => i - n))::date) end,
+            grp, i, t, k
+          );
+          n_proj := n_proj + 1;
+        end if;
+      end loop;
+    end if;
+  end loop;
+
+  update import_batches set new_rows = n_new, duplicate_rows = n_dup, reconciled_rows = n_rec where id = b;
+  return jsonb_build_object('batch_id', b, 'new', n_new, 'duplicates', n_dup, 'reconciled', n_rec,
+    'projected', n_proj, 'invoice_id', inv);
+end $$;
+
+-- LGPD: exclusão do workspace inteiro (somente o proprietário)
+create or replace function public.delete_workspace(p_workspace_id uuid, p_confirm_name text)
+returns void language plpgsql security definer set search_path = public as $$
+declare
+  ws record;
+begin
+  select id, name into ws from workspaces where id = p_workspace_id;
+  if ws.id is null then raise exception 'Workspace não encontrado.'; end if;
+  if not public.is_member(p_workspace_id, 'owner') then raise exception 'Só o proprietário pode excluir o workspace.'; end if;
+  if ws.name <> p_confirm_name then raise exception 'O nome digitado não confere.'; end if;
+  delete from workspaces where id = p_workspace_id; -- cascata remove todos os dados
+end $$;
+revoke execute on function public.delete_workspace(uuid, text) from anon;
 
 notify pgrst, 'reload schema';

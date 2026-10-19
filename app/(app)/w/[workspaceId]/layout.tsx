@@ -14,6 +14,7 @@ const NAV = [
   { href: "cartoes", label: "Cartões" },
   { href: "contas", label: "Contas e cartões" },
   { href: "relatorios", label: "Relatórios" },
+  { href: "orcamento", label: "Orçamento" },
   { href: "categorias", label: "Categorias" },
   { href: "regras", label: "Regras" },
   { href: "contatos", label: "Contatos" },

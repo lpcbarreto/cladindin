@@ -1,6 +1,6 @@
 import { loadWorkspaceContext, hasRole, ROLE_LABEL, type Role } from "@/lib/workspace";
 import { changeRole, removeMember, revokeInvite } from "./actions";
-import { InviteForm, NewWorkspaceForm } from "./forms";
+import { DeleteWorkspaceForm, DemoDataForm, InviteForm, NewWorkspaceForm } from "./forms";
 import { ThemeToggle } from "@/components/theme-toggle";
 
 export default async function SettingsPage({ params }: { params: Promise<{ workspaceId: string }> }) {
@@ -102,6 +102,29 @@ export default async function SettingsPage({ params }: { params: Promise<{ works
       <section className="card space-y-4">
         <h2 className="font-medium">Novo workspace</h2>
         <NewWorkspaceForm />
+      </section>
+
+      {canManage && <DemoDataForm workspaceId={workspaceId} />}
+
+      <section className="card space-y-3">
+        <h2 className="font-medium">Seus dados (LGPD)</h2>
+        <p className="text-sm text-muted">
+          Os dados ficam só no banco deste sistema. Você pode baixar uma cópia completa de “{current.name}” em JSON (contas, lançamentos,
+          regras, orçamentos etc.).
+        </p>
+        <a href={`/w/${workspaceId}/configuracoes/exportar`} className="btn-ghost">
+          Baixar meus dados (JSON)
+        </a>
+        {current.role === "owner" && (
+          <div className="space-y-2 border-t border-border pt-4">
+            <h3 className="font-semibold text-danger">Excluir workspace</h3>
+            <p className="text-sm text-muted">
+              Apaga de forma definitiva todos os lançamentos, contas, comprovantes e membros deste workspace. Não dá para desfazer: baixe seus
+              dados antes.
+            </p>
+            <DeleteWorkspaceForm workspaceId={workspaceId} name={current.name} />
+          </div>
+        )}
       </section>
     </div>
   );

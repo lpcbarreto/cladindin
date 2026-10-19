@@ -2,6 +2,8 @@ import Link from "next/link";
 import { loadWorkspaceContext } from "@/lib/workspace";
 import { formatBRL } from "@/lib/finance/money";
 import { addDays, formatDateBR, monthRange, todayISO } from "@/lib/finance/dates";
+import { loadBudget } from "@/lib/budget-server";
+import { budgetStatus } from "@/lib/finance/budget";
 
 type Tx = {
   id: string;
@@ -20,6 +22,8 @@ export default async function DashboardPage({ params }: { params: Promise<{ work
   const { start, end } = monthRange(today.slice(0, 7));
   const in30 = addDays(today, 30);
 
+  const budgetRows = await loadBudget(supabase, workspaceId, today.slice(0, 7)).catch(() => []);
+  const budgetAlerts = budgetRows.filter((b) => ["over", "attention"].includes(budgetStatus(b))).slice(0, 6);
   const [balances, monthTx, pending, invoices] = await Promise.all([
     supabase
       .from("account_balances")
@@ -190,8 +194,8 @@ export default async function DashboardPage({ params }: { params: Promise<{ work
                     <span>{name}</span>
                     <span className="tabular-nums">{formatBRL(value)}</span>
                   </div>
-                  <div className="mt-1 h-1.5 rounded-full bg-background">
-                    <div className="h-1.5 rounded-full bg-danger" style={{ width: `${(value / topMax) * 100}%` }} />
+                  <div className="mt-1 h-1.5 rounded-full bg-surface-2">
+                    <div className="h-1.5 rounded-full" style={{ width: `${(value / topMax) * 100}%`, background: "var(--series-expense)" }} />
                   </div>
                 </li>
               ))}
@@ -199,6 +203,33 @@ export default async function DashboardPage({ params }: { params: Promise<{ work
           )}
         </section>
       </div>
+
+      {budgetAlerts.length > 0 && (
+        <section className="card space-y-3">
+          <div className="flex items-center justify-between">
+            <h2 className="font-bold">Orçamento do mês</h2>
+            <Link href={`${base}/orcamento`} className="text-xs text-muted hover:underline">
+              Ver orçamento
+            </Link>
+          </div>
+          <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            {budgetAlerts.map((b) => {
+              const used = b.spent + b.planned;
+              const over = used > (b.budget ?? 0);
+              return (
+                <li key={b.categoryId} className={`rounded-2xl p-3 text-sm ${over ? "bg-danger-soft" : "bg-accent-soft"}`}>
+                  <p className="font-semibold">
+                    {over ? "⚠ Estourado" : "● Atenção"} · {b.name}
+                  </p>
+                  <p className="text-muted">
+                    {formatBRL(used)} de {formatBRL(b.budget ?? 0)} ({Math.round((used / (b.budget ?? 1)) * 100)}%)
+                  </p>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      )}
     </div>
   );
 }

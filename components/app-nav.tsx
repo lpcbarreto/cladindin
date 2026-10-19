@@ -11,6 +11,7 @@ const ICONS: Record<string, React.ReactNode> = {
   importacoes: <path d="M12 8v4l3 2M21 12a9 9 0 1 1-3-6.7M21 4v5h-5" />,
   "a-pagar": <path d="M8 2v4M16 2v4M3 9h18M5 5h14v16H5zM9 15l2 2 4-4" />,
   recorrencias: <path d="M17 2l4 4-4 4M3 11V9a3 3 0 0 1 3-3h15M7 22l-4-4 4-4M21 13v2a3 3 0 0 1-3 3H3" />,
+  orcamento: <path d="M12 3a9 9 0 1 0 9 9h-9zM15 2.5A9 9 0 0 1 21.5 9H15z" />,
   relatorios: <path d="M4 20V10M10 20V4M16 20v-7M22 20H2" />,
   regras: <path d="M4 6h10M4 12h7M4 18h10M17 4l3 3-3 3M17 14l3 3-3 3" />,
   cartoes: <path d="M3 6h18v12H3zM3 10h18M7 15h4" />,

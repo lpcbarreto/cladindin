@@ -1,7 +1,8 @@
 "use client";
 
 import { useActionState } from "react";
-import { createInvite, createWorkspace } from "./actions";
+import { createInvite, createWorkspace, deleteWorkspace } from "./actions";
+import { loadDemoData } from "./demo";
 
 export function InviteForm({ workspaceId }: { workspaceId: string }) {
   const [state, action, pending] = useActionState(createInvite, null);
@@ -43,5 +44,39 @@ export function NewWorkspaceForm() {
       </button>
       {state && !state.ok && <p className="text-sm text-danger">{state.message}</p>}
     </form>
+  );
+}
+
+export function DeleteWorkspaceForm({ workspaceId, name }: { workspaceId: string; name: string }) {
+  const [state, action, pending] = useActionState(deleteWorkspace, null);
+  return (
+    <form action={action} className="flex flex-col gap-2 sm:flex-row sm:items-center">
+      <input type="hidden" name="workspaceId" value={workspaceId} />
+      <input name="confirmName" required placeholder={`Digite “${name}” para confirmar`} className="input sm:max-w-xs" autoComplete="off" />
+      <button className="btn bg-danger hover:bg-danger" disabled={pending}>
+        {pending ? "Excluindo..." : "Excluir definitivamente"}
+      </button>
+      {state && !state.ok && <p className="text-sm text-danger">{state.message}</p>}
+    </form>
+  );
+}
+
+export function DemoDataForm({ workspaceId }: { workspaceId: string }) {
+  const [state, action, pending] = useActionState(loadDemoData, null);
+  return (
+    <section className="card space-y-3">
+      <h2 className="font-medium">Dados de demonstração</h2>
+      <p className="text-sm text-muted">
+        Cria contas, um cartão, lançamentos de 3 meses, uma recorrência, uma regra e um orçamento fictícios para conhecer o sistema. Funciona só
+        em workspace sem lançamentos.
+      </p>
+      <form action={action} className="flex flex-wrap items-center gap-3">
+        <input type="hidden" name="workspaceId" value={workspaceId} />
+        <button className="btn-ghost" disabled={pending}>
+          {pending ? "Criando..." : "Carregar dados de demonstração"}
+        </button>
+        {state && <p className={`text-sm ${state.ok ? "text-primary" : "text-danger"}`}>{state.message}</p>}
+      </form>
+    </section>
   );
 }
