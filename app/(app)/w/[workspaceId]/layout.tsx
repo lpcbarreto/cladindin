@@ -31,7 +31,7 @@ export default async function WorkspaceLayout({
       <aside className="flex flex-col gap-5 border-b border-border bg-surface/70 p-4 backdrop-blur md:sticky md:top-0 md:h-dvh md:border-r md:border-b-0 md:p-5">
         <div className="flex items-center justify-between">
           <Logo size={34} />
-          <div className="flex items-center gap-2 md:hidden">
+          <div className="w-32 md:hidden">
             <ThemeToggle />
           </div>
         </div>
@@ -44,12 +44,10 @@ export default async function WorkspaceLayout({
             </span>
             <span className="min-w-0 truncate text-xs text-muted">{user.email}</span>
           </div>
-          <div className="flex gap-2">
-            <ThemeToggle />
-            <form action="/auth/sair" method="post" className="flex-1">
-              <button className="btn-ghost w-full">Sair</button>
-            </form>
-          </div>
+          <ThemeToggle showLabels />
+          <form action="/auth/sair" method="post">
+            <button className="btn-ghost w-full">Sair</button>
+          </form>
         </div>
       </aside>
       <main className="mx-auto w-full max-w-6xl p-4 md:p-8">{children}</main>

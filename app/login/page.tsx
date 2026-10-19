@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Logo, LogoMark } from "@/components/logo";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { LoginForm } from "./login-form";
 
 const HIGHLIGHTS = [
@@ -23,7 +24,10 @@ export default async function LoginPage({
   if (user) redirect(safeNext);
 
   return (
-    <main className="grid min-h-dvh lg:grid-cols-2">
+    <main className="relative grid min-h-dvh lg:grid-cols-2">
+      <div className="absolute top-4 right-4 z-20 w-32">
+        <ThemeToggle />
+      </div>
       <section className="relative hidden overflow-hidden bg-primary p-12 text-primary-fg lg:flex lg:flex-col lg:justify-between">
         <div className="flex items-center gap-2 text-2xl font-extrabold tracking-tight">
           <span className="rounded-full bg-primary-fg/15 p-1">

@@ -1,6 +1,7 @@
 import { loadWorkspaceContext, hasRole, ROLE_LABEL, type Role } from "@/lib/workspace";
 import { changeRole, removeMember, revokeInvite } from "./actions";
 import { InviteForm, NewWorkspaceForm } from "./forms";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 export default async function SettingsPage({ params }: { params: Promise<{ workspaceId: string }> }) {
   const { workspaceId } = await params;
@@ -89,6 +90,14 @@ export default async function SettingsPage({ params }: { params: Promise<{ works
           )}
         </section>
       )}
+
+      <section className="card space-y-3">
+        <h2 className="font-medium">Aparência</h2>
+        <p className="text-sm text-muted">Escolha o tema claro, o escuro ou siga a configuração do seu sistema.</p>
+        <div className="max-w-sm">
+          <ThemeToggle showLabels />
+        </div>
+      </section>
 
       <section className="card space-y-4">
         <h2 className="font-medium">Novo workspace</h2>
