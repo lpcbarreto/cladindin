@@ -46,10 +46,10 @@ export function TransactionForm({
       <input type="hidden" name="workspaceId" value={workspaceId} />
       {initial && <input type="hidden" name="id" value={initial.id} />}
 
-      <fieldset className="flex gap-1 rounded-md bg-background p-1 text-sm sm:col-span-2 lg:col-span-4">
+      <fieldset className="flex gap-1 rounded-full bg-surface-2 p-1 text-sm font-semibold sm:col-span-2 lg:col-span-4">
         <legend className="sr-only">Tipo</legend>
         {(editing ? (["expense", "income"] as const) : (["expense", "income", "transfer"] as const)).map((t) => (
-          <label key={t} className={`flex-1 cursor-pointer rounded px-2 py-1 text-center ${type === t ? "bg-surface shadow-sm" : "text-muted"}`}>
+          <label key={t} className={`flex-1 cursor-pointer rounded-full px-2 py-1.5 text-center transition ${type === t ? "bg-surface shadow-sm" : "text-muted hover:text-foreground"}`}>
             <input type="radio" name="type" value={t} checked={type === t} onChange={() => setType(t)} className="sr-only" />
             {t === "expense" ? "Despesa" : t === "income" ? "Receita" : "Transferência"}
           </label>

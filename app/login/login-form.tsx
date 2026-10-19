@@ -58,13 +58,14 @@ export function LoginForm({ next }: { next: string }) {
 
   return (
     <form onSubmit={onSubmit} className="space-y-3">
-      <div className="mb-2 flex gap-1 rounded-md bg-background p-1 text-sm">
+      <div className="mb-2 flex gap-1 rounded-full bg-surface-2 p-1 text-sm font-semibold">
         {(Object.keys(LABELS) as Mode[]).map((m) => (
           <button
             key={m}
             type="button"
             onClick={() => setMode(m)}
-            className={`flex-1 rounded px-2 py-1 ${mode === m ? "bg-surface shadow-sm" : "text-muted"}`}
+            aria-pressed={mode === m}
+            className={`flex-1 rounded-full px-2 py-1.5 transition ${mode === m ? "bg-surface text-foreground shadow-sm" : "text-muted hover:text-foreground"}`}
           >
             {LABELS[m]}
           </button>

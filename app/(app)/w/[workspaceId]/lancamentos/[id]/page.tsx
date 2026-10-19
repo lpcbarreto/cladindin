@@ -25,7 +25,7 @@ export default async function EditTransactionPage({ params }: { params: Promise<
       <Link href={`/w/${workspaceId}/lancamentos?mes=${tx.due_date.slice(0, 7)}`} className="text-sm text-muted hover:underline">
         ← Voltar
       </Link>
-      <h1 className="text-2xl font-semibold">Editar lançamento</h1>
+      <h1 className="text-3xl font-extrabold tracking-tight">Editar lançamento</h1>
       <div className="card">
         <TransactionForm
           workspaceId={workspaceId}

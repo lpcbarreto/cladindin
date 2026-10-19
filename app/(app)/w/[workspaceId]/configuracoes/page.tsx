@@ -24,7 +24,7 @@ export default async function SettingsPage({ params }: { params: Promise<{ works
 
   return (
     <div className="space-y-8">
-      <h1 className="text-2xl font-semibold">Configurações</h1>
+      <h1 className="text-3xl font-extrabold tracking-tight">Configurações</h1>
 
       <section className="card space-y-4">
         <h2 className="font-medium">Membros de “{current.name}”</h2>

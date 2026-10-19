@@ -47,7 +47,7 @@ export default async function TransactionsPage({
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold">Lançamentos</h1>
+        <h1 className="text-3xl font-extrabold tracking-tight">Lançamentos</h1>
         <div className="flex items-center gap-2 text-sm">
           <Link className="btn-ghost px-3" href={link({ mes: shiftMonth(month, -1), pagina: undefined })} aria-label="Mês anterior">
             ‹

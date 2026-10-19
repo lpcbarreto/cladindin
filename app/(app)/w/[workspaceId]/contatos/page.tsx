@@ -26,7 +26,7 @@ export default async function ContactsPage({
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-semibold">Clientes e fornecedores</h1>
+      <h1 className="text-3xl font-extrabold tracking-tight">Clientes e fornecedores</h1>
       {canEdit && (
         <section className="card space-y-3">
           <h2 className="font-medium">Novo contato</h2>

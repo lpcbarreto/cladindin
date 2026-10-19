@@ -1,54 +1,93 @@
 @import "tailwindcss";
+@import "@fontsource-variable/nunito";
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* Identidade Cladindin: amigável e leve, verde-dinheiro sobre creme */
 :root {
-  --background: #f7f7f5;
+  --background: #fbf8f1;
   --surface: #ffffff;
-  --foreground: #18181b;
-  --muted: #71717a;
-  --border: #e4e4e7;
-  --primary: #0f766e;
+  --surface-2: #f5f1e6;
+  --foreground: #1f2a24;
+  --muted: #6b6759;
+  --border: #ebe4d3;
+  --primary: #177a4c;
+  --primary-strong: #0f5e39;
+  --primary-soft: #e3f3e9;
   --primary-fg: #ffffff;
-  --danger: #b91c1c;
+  --accent: #f2b33d;
+  --accent-soft: #fdf1d6;
+  --danger: #c4473b;
+  --danger-soft: #fbe7e4;
+  --ring: #177a4c;
+  color-scheme: light;
 }
 .dark {
-  --background: #0c0c0e;
-  --surface: #17171a;
-  --foreground: #ededed;
-  --muted: #a1a1aa;
-  --border: #2a2a2e;
-  --primary: #2dd4bf;
-  --primary-fg: #04201d;
-  --danger: #f87171;
+  --background: #141a16;
+  --surface: #1b231e;
+  --surface-2: #222c26;
+  --foreground: #eef2ec;
+  --muted: #a2aa9f;
+  --border: #2b3530;
+  --primary: #4fd894;
+  --primary-strong: #7be6b0;
+  --primary-soft: #1c3a2a;
+  --primary-fg: #0a2416;
+  --accent: #f6c55b;
+  --accent-soft: #3a311b;
+  --danger: #ff8a7a;
+  --danger-soft: #3d2420;
+  --ring: #4fd894;
+  color-scheme: dark;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
   --color-foreground: var(--foreground);
   --color-muted: var(--muted);
   --color-border: var(--border);
   --color-primary: var(--primary);
+  --color-primary-strong: var(--primary-strong);
+  --color-primary-soft: var(--primary-soft);
   --color-primary-fg: var(--primary-fg);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
   --color-danger: var(--danger);
-  --font-sans: ui-sans-serif, system-ui, "Segoe UI", Roboto, sans-serif;
+  --color-danger-soft: var(--danger-soft);
+  --font-sans: "Nunito Variable", ui-rounded, ui-sans-serif, system-ui, "Segoe UI", sans-serif;
+  --radius-card: 1.25rem;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
+  font-feature-settings: "tnum" 0;
+}
+
+h1,
+h2 {
+  letter-spacing: -0.01em;
+}
+h1 {
+  font-weight: 800;
+}
+
+:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
 }
 
 @utility input {
-  @apply w-full rounded-md border border-border bg-surface px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary;
+  @apply w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm transition outline-none placeholder:text-muted/70 focus:border-primary focus:ring-4 focus:ring-primary/15;
 }
 @utility btn {
-  @apply inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-fg hover:opacity-90 disabled:opacity-50;
+  @apply inline-flex items-center justify-center gap-2 rounded-full bg-primary px-5 py-2 text-sm font-bold text-primary-fg shadow-sm transition hover:bg-primary-strong active:scale-[0.98] disabled:opacity-50 disabled:active:scale-100;
 }
 @utility btn-ghost {
-  @apply inline-flex items-center justify-center rounded-md border border-border px-4 py-2 text-sm hover:bg-background;
+  @apply inline-flex items-center justify-center gap-2 rounded-full border border-border bg-surface px-4 py-2 text-sm font-semibold transition hover:border-primary/40 hover:bg-primary-soft;
 }
 @utility card {
-  @apply rounded-xl border border-border bg-surface p-5;
+  @apply rounded-[1.25rem] border border-border bg-surface p-5 shadow-[0_1px_0_rgba(31,42,36,0.04),0_8px_24px_-12px_rgba(31,42,36,0.12)];
 }

@@ -42,7 +42,7 @@ export default async function CategoriesPage({ params }: { params: Promise<{ wor
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-semibold">Categorias</h1>
+      <h1 className="text-3xl font-extrabold tracking-tight">Categorias</h1>
       {canEdit && (
         <section className="card space-y-3">
           <h2 className="font-medium">Nova categoria</h2>

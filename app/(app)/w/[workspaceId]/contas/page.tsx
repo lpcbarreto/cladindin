@@ -25,7 +25,7 @@ export default async function AccountsPage({ params }: { params: Promise<{ works
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-semibold">Contas e cartões</h1>
+      <h1 className="text-3xl font-extrabold tracking-tight">Contas e cartões</h1>
 
       <div className="card overflow-x-auto p-0">
         <table className="w-full text-sm">
