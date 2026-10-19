@@ -185,31 +185,28 @@ h1 {
 
 /* Entrada de página (o template remonta a cada navegação) */
 @utility page-enter {
-  animation: fade-up 420ms var(--ease-out) both;
+  animation: fade-up 220ms var(--ease-out) both;
 }
 
 /* Filhos entram em cascata */
 @utility stagger {
   & > * {
-    animation: fade-up 480ms var(--ease-out) both;
+    animation: fade-up 300ms var(--ease-out) both;
   }
   & > *:nth-child(2) {
-    animation-delay: 50ms;
+    animation-delay: 30ms;
   }
   & > *:nth-child(3) {
-    animation-delay: 100ms;
+    animation-delay: 60ms;
   }
   & > *:nth-child(4) {
-    animation-delay: 150ms;
+    animation-delay: 90ms;
   }
   & > *:nth-child(5) {
-    animation-delay: 200ms;
+    animation-delay: 120ms;
   }
-  & > *:nth-child(6) {
-    animation-delay: 250ms;
-  }
-  & > *:nth-child(n + 7) {
-    animation-delay: 300ms;
+  & > *:nth-child(n + 6) {
+    animation-delay: 150ms;
   }
 }
 
@@ -231,7 +228,7 @@ h1 {
 /* Barras de progresso crescem da esquerda */
 @utility bar-grow {
   transform-origin: left;
-  animation: grow-x 900ms var(--ease-out) both;
+  animation: grow-x 600ms var(--ease-out) both;
 }
 
 /* Mensagens de confirmação/erro aparecem com um "pop" */
@@ -383,12 +380,10 @@ form :is(p, span).text-danger {
 @keyframes blob {
   0%,
   100% {
-    border-radius: 42% 58% 63% 37% / 41% 44% 56% 59%;
-    transform: rotate(0) scale(1);
+    transform: translate3d(0, 0, 0) rotate(0) scale(1);
   }
   50% {
-    border-radius: 58% 42% 38% 62% / 55% 38% 62% 45%;
-    transform: rotate(25deg) scale(1.08);
+    transform: translate3d(-12px, 10px, 0) rotate(25deg) scale(1.08);
   }
 }
 @keyframes float-card {
@@ -419,6 +414,7 @@ form :is(p, span).text-danger {
 }
 
 @utility coin-fall {
+  will-change: transform, opacity;
   animation: coin-fall var(--dur, 9s) linear var(--delay, 0s) infinite both;
 }
 @utility word-in {
@@ -438,13 +434,16 @@ form :is(p, span).text-danger {
   animation: grow-y 900ms var(--ease-spring) both;
 }
 @utility blob {
+  /* forma fixa; só transform anima (fica na GPU, sem repintar) */
+  border-radius: 42% 58% 63% 37% / 41% 44% 56% 59%;
+  will-change: transform;
   animation: blob 14s ease-in-out infinite;
 }
 @utility float-card {
   animation: float-card 6s ease-in-out infinite;
 }
 @utility pulse-ring {
-  animation: pulse-ring 1.8s ease-out infinite;
+  animation: pulse-ring 1.8s ease-out 3;
 }
 @utility shake {
   animation: shake 420ms ease both;

@@ -3,9 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 
 export default async function Home() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { data: session } = await supabase.auth.getClaims();
+  const user = session?.claims?.sub ? { id: session.claims.sub } : null;
   if (!user) redirect("/login");
 
   const { data } = await supabase

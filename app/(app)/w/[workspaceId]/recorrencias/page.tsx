@@ -1,3 +1,4 @@
+import { after } from "next/server";
 import Link from "next/link";
 import { loadWorkspaceContext, hasRole } from "@/lib/workspace";
 import { loadOptions } from "@/lib/transactions";
@@ -25,7 +26,8 @@ export default async function RecurrencesPage({
   const { supabase, current } = await loadWorkspaceContext(workspaceId);
   const canEdit = hasRole(current.role, "editor");
   const today = todayISO();
-  if (canEdit) await topUpWorkspace(supabase, workspaceId, today);
+  // Completa a janela de previstos depois de responder (o cron diário também faz isso)
+  if (canEdit) after(() => topUpWorkspace(supabase, workspaceId, today).catch(() => undefined));
 
   const [options, { data: rulesData }, { data: history }] = await Promise.all([
     loadOptions(supabase, workspaceId),

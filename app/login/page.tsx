@@ -13,9 +13,8 @@ export default async function LoginPage({
   const { next, erro } = await searchParams;
   const safeNext = next?.startsWith("/") && !next.startsWith("//") ? next : "/";
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { data: session } = await supabase.auth.getClaims();
+  const user = session?.claims?.sub ? { id: session.claims.sub } : null;
   if (user) redirect(safeNext);
 
   return (
@@ -29,8 +28,8 @@ export default async function LoginPage({
       <section className="relative flex items-center justify-center overflow-hidden px-4 py-10">
         {/* Brilhos suaves atrás do formulário */}
         <div aria-hidden="true" className="pointer-events-none absolute inset-0">
-          <div className="blob absolute top-[12%] -right-24 h-72 w-72 bg-primary/10 blur-2xl" />
-          <div className="blob absolute bottom-[8%] -left-20 h-64 w-64 bg-accent/15 blur-2xl" style={{ animationDelay: "-5s" }} />
+          <div className="blob absolute top-[12%] -right-24 h-72 w-72" style={{ background: "radial-gradient(circle, color-mix(in srgb, var(--primary) 16%, transparent), transparent 70%)" }} />
+          <div className="blob absolute bottom-[8%] -left-20 h-64 w-64" style={{ background: "radial-gradient(circle, color-mix(in srgb, var(--accent) 22%, transparent), transparent 70%)", animationDelay: "-5s" }} />
         </div>
 
         <div className="stagger relative w-full max-w-sm space-y-6">

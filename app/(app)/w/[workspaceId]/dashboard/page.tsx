@@ -23,9 +23,9 @@ export default async function DashboardPage({ params }: { params: Promise<{ work
   const { start, end } = monthRange(today.slice(0, 7));
   const in30 = addDays(today, 30);
 
-  const budgetRows = await loadBudget(supabase, workspaceId, today.slice(0, 7)).catch(() => []);
-  const budgetAlerts = budgetRows.filter((b) => ["over", "attention"].includes(budgetStatus(b))).slice(0, 6);
-  const [balances, monthTx, pending, invoices] = await Promise.all([
+  // Tudo em paralelo: uma única ida ao banco por consulta, sem esperar uma pela outra
+  const [budgetRows, balances, monthTx, pending, invoices] = await Promise.all([
+    loadBudget(supabase, workspaceId, today.slice(0, 7)).catch(() => []),
     supabase
       .from("account_balances")
       .select("account_id, name, type, balance_cents")
@@ -62,6 +62,7 @@ export default async function DashboardPage({ params }: { params: Promise<{ work
       .lte("due_date", in30)
       .gt("total_cents", 0),
   ]);
+  const budgetAlerts = budgetRows.filter((b) => ["over", "attention"].includes(budgetStatus(b))).slice(0, 6);
 
   const accounts = (balances.data ?? []).filter((a) => a.type !== "credit_card");
   const cards = (balances.data ?? []).filter((a) => a.type === "credit_card");

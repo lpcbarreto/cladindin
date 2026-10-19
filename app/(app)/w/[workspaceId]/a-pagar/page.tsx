@@ -1,3 +1,4 @@
+import { after } from "next/server";
 import Link from "next/link";
 import { loadWorkspaceContext, hasRole } from "@/lib/workspace";
 import { formatBRL } from "@/lib/finance/money";
@@ -44,7 +45,8 @@ export default async function PayablesPage({
   const { supabase, current } = await loadWorkspaceContext(workspaceId);
   const canEdit = hasRole(current.role, "editor");
   const today = todayISO();
-  if (canEdit) await topUpWorkspace(supabase, workspaceId, today);
+  // Completa a janela de previstos depois de responder (o cron diário também faz isso)
+  if (canEdit) after(() => topUpWorkspace(supabase, workspaceId, today).catch(() => undefined));
   const until = ate === "90" ? addDays(today, 90) : ate === "365" ? addDays(today, 365) : addDays(today, 60);
 
   const [{ data }, { data: invoices }, { data: accounts }] = await Promise.all([

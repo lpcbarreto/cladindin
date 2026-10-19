@@ -8,7 +8,7 @@ const brl = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" 
  * Valor em reais que "conta" até o número final ao aparecer.
  * Respeita "reduzir movimento" e mostra o valor final para leitores de tela desde o início.
  */
-export function CountUp({ cents, duration = 900, className }: { cents: number; duration?: number; className?: string }) {
+export function CountUp({ cents, duration = 600, className }: { cents: number; duration?: number; className?: string }) {
   const [shown, setShown] = useState(cents);
   const from = useRef(0);
 
