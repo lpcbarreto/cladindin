@@ -1,0 +1,54 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  --background: #f7f7f5;
+  --surface: #ffffff;
+  --foreground: #18181b;
+  --muted: #71717a;
+  --border: #e4e4e7;
+  --primary: #0f766e;
+  --primary-fg: #ffffff;
+  --danger: #b91c1c;
+}
+.dark {
+  --background: #0c0c0e;
+  --surface: #17171a;
+  --foreground: #ededed;
+  --muted: #a1a1aa;
+  --border: #2a2a2e;
+  --primary: #2dd4bf;
+  --primary-fg: #04201d;
+  --danger: #f87171;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-border: var(--border);
+  --color-primary: var(--primary);
+  --color-primary-fg: var(--primary-fg);
+  --color-danger: var(--danger);
+  --font-sans: ui-sans-serif, system-ui, "Segoe UI", Roboto, sans-serif;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+}
+
+@utility input {
+  @apply w-full rounded-md border border-border bg-surface px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary;
+}
+@utility btn {
+  @apply inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-fg hover:opacity-90 disabled:opacity-50;
+}
+@utility btn-ghost {
+  @apply inline-flex items-center justify-center rounded-md border border-border px-4 py-2 text-sm hover:bg-background;
+}
+@utility card {
+  @apply rounded-xl border border-border bg-surface p-5;
+}
