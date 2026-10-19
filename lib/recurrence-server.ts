@@ -116,6 +116,8 @@ export async function clearFuture(supabase: SupabaseClient, ruleId: string, from
     .eq("recurrence_id", ruleId)
     .eq("status", "planned")
     .eq("recurrence_detached", false)
+    // Ocorrências que o usuário excluiu ficam: o índice único impede que a regra as recrie
+    .is("deleted_at", null)
     .gte("due_date", fromDate);
 }
 

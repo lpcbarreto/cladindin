@@ -68,7 +68,10 @@ export async function previewImport(form: FormData): Promise<{ ok: true; files: 
       return [a.id, { id: a.id, type: a.type, closing_day: cc?.closing_day ?? null, due_day: cc?.due_day ?? null }];
     }),
   );
-  const hints = Object.assign(await loadCategoryHints(supabase, ws), { rules: await loadRules(supabase, ws) });
+  const hints = Object.assign(await loadCategoryHints(supabase, ws), {
+    rules: await loadRules(supabase, ws),
+    kinds: new Map((cats ?? []).map((c) => [c.id as string, c.kind as string])),
+  });
   const keywordCats = KEYWORD_CATEGORIES.flatMap(([re, name]) => {
     const c = (cats ?? []).find((x) => x.kind === "expense" && x.name.toLowerCase() === name.toLowerCase());
     return c ? [[re, c.id] as [RegExp, string]] : [];
@@ -231,7 +234,7 @@ async function buildStatement(
   ws: string,
   form: FormData,
   accounts: Map<string, Account>,
-  hints: Map<string, string> & { rules: CategorizationRule[] },
+  hints: Map<string, string> & { rules: CategorizationRule[]; kinds: Map<string, string> },
   keywordCats: [RegExp, string][],
   fileHash: string,
   input: StatementInput,
@@ -287,7 +290,7 @@ async function buildStatement(
     // Regras do usuário têm prioridade; depois histórico; depois palavras-chave de encargos
     const rule = findRule(hints.rules, { description: t.description, amountCents: t.amountCents, accountId });
     const suggested =
-      rule?.categoryId ??
+      (rule?.categoryId && hints.kinds.get(rule.categoryId) === (isCard || t.amountCents < 0 ? "expense" : "income") ? rule.categoryId : null) ??
       hints.get(installment?.key ?? norm) ??
       hints.get(norm) ??
       keywordCats.find(([re]) => re.test(raw))?.[1] ??

@@ -55,6 +55,9 @@ export async function applyRulesToExisting(
   opts: { onlyEmpty: boolean; ruleIds?: string[] },
 ) {
   let rules = await loadRules(supabase, workspaceId);
+  // Natureza da categoria: regra de despesa não categoriza receita (e vice-versa)
+  const { data: cats } = await supabase.from("categories").select("id, kind").eq("workspace_id", workspaceId);
+  const catKind = new Map((cats ?? []).map((c) => [c.id as string, c.kind as string]));
   if (opts.ruleIds) rules = rules.filter((r) => opts.ruleIds!.includes(r.id));
   if (!rules.length) return { updated: 0 };
 
@@ -63,7 +66,7 @@ export async function applyRulesToExisting(
   for (let from = 0; ; from += 1000) {
     let q = supabase
       .from("transactions")
-      .select("id, account_id, description, statement_description, direction, amount_cents, category_id, contact_id")
+      .select("id, account_id, description, statement_description, direction, amount_cents, category_id, contact_id, type")
       .eq("workspace_id", workspaceId)
       .is("deleted_at", null)
       .neq("type", "transfer")
@@ -84,7 +87,8 @@ export async function applyRulesToExisting(
       });
       if (!rule) continue;
       const patch: Record<string, string> = {};
-      if (rule.categoryId && (!opts.onlyEmpty || !t.category_id) && t.category_id !== rule.categoryId) patch.category_id = rule.categoryId;
+      const catOk = !rule.categoryId || catKind.get(rule.categoryId) === t.type;
+      if (rule.categoryId && catOk && (!opts.onlyEmpty || !t.category_id) && t.category_id !== rule.categoryId) patch.category_id = rule.categoryId;
       if (rule.contactId && (!opts.onlyEmpty || !t.contact_id) && t.contact_id !== rule.contactId) patch.contact_id = rule.contactId;
       rule.tagIds.forEach((tag) => tagRows.push({ transaction_id: t.id, tag_id: tag, workspace_id: workspaceId }));
       if (!Object.keys(patch).length) continue;
