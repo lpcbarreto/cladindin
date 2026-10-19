@@ -10,6 +10,8 @@ import { normalizeDescription, sha256Hex, withFingerprints } from "@/lib/importe
 import { detectInstallment, invoiceDatesForPurchase } from "@/lib/finance/installments";
 import { addDays } from "@/lib/finance/dates";
 import { rateLimit } from "@/lib/rate-limit";
+import { findRule, type CategorizationRule } from "@/lib/finance/rules";
+import { applyRulesToExisting, loadRules } from "@/lib/rules-server";
 import type { CommitResult, CsvInfo, PreviewFile, PreviewRow, PreviewStatement } from "./types";
 
 const CARD_PAYMENT_RE = /\b(PAGAMENTO|PGTO|PAGTO|PAG FATURA)\b/;
@@ -66,7 +68,7 @@ export async function previewImport(form: FormData): Promise<{ ok: true; files: 
       return [a.id, { id: a.id, type: a.type, closing_day: cc?.closing_day ?? null, due_day: cc?.due_day ?? null }];
     }),
   );
-  const hints = await loadCategoryHints(supabase, ws);
+  const hints = Object.assign(await loadCategoryHints(supabase, ws), { rules: await loadRules(supabase, ws) });
   const keywordCats = KEYWORD_CATEGORIES.flatMap(([re, name]) => {
     const c = (cats ?? []).find((x) => x.kind === "expense" && x.name.toLowerCase() === name.toLowerCase());
     return c ? [[re, c.id] as [RegExp, string]] : [];
@@ -229,7 +231,7 @@ async function buildStatement(
   ws: string,
   form: FormData,
   accounts: Map<string, Account>,
-  hints: Map<string, string>,
+  hints: Map<string, string> & { rules: CategorizationRule[] },
   keywordCats: [RegExp, string][],
   fileHash: string,
   input: StatementInput,
@@ -282,8 +284,14 @@ async function buildStatement(
     }
     const inst = detectInstallment(t.description, t.installment ?? null);
     const installment = inst && t.amountCents < 0 ? { number: inst.number, total: inst.total, key: inst.base } : null;
+    // Regras do usuário têm prioridade; depois histórico; depois palavras-chave de encargos
+    const rule = findRule(hints.rules, { description: t.description, amountCents: t.amountCents, accountId });
     const suggested =
-      hints.get(installment?.key ?? norm) ?? hints.get(norm) ?? keywordCats.find(([re]) => re.test(raw))?.[1] ?? null;
+      rule?.categoryId ??
+      hints.get(installment?.key ?? norm) ??
+      hints.get(norm) ??
+      keywordCats.find(([re]) => re.test(raw))?.[1] ??
+      null;
     return {
       index: t.index,
       date: t.date,
@@ -441,6 +449,8 @@ export async function commitImport(input: z.input<typeof commitSchema>): Promise
     return { ok: false, message: "Não foi possível gravar a importação." };
   }
   const d = data as { batch_id: string; new: number; duplicates: number; reconciled: number; projected: number; invoice_id: string | null };
+  // Regras também definem contato e preenchem o que ficou sem categoria
+  if (d.new > 0) await applyRulesToExisting(supabase, v.workspaceId, { onlyEmpty: true });
 
   let balanceCheck: { statement: number; system: number; date: string } | null = null;
   if (v.balance && !v.invoiceDueDate) {

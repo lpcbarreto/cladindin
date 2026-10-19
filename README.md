@@ -9,7 +9,7 @@ Sistema web de gestão financeira para pessoa física e pequena empresa: contas 
 - [x] **Fase 3**: importador OFX (conta e cartão), deduplicação, conciliação, desfazer
 - [x] **Fase 4**: faturas de cartão (OFX, CSV com mapeador e modelos, PDF), parcelamentos, estornos, pagamento de fatura
 - [x] **Fase 5**: recorrências (feriados, dia útil, editar esta/próximas/todas, pausar), job diário, sugestões de recorrência, contas a pagar/receber com baixa parcial, juros, multa, desconto e comprovantes
-- [ ] Fase 6: regras de categorização, relatórios, exportações
+- [x] **Fase 6**: regras de categorização (aplicadas na importação, reaplicar, criar a partir do lançamento), relatórios (fluxo, categorias/contatos/centros, comparativo, DRE, saldo) com CSV e impressão/PDF
 - [ ] Fase 7: polimento, metas, e2e, deploy
 
 ## Rodando localmente

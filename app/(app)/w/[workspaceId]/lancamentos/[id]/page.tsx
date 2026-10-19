@@ -9,6 +9,8 @@ import { listAttachments } from "@/lib/attachments";
 import { removeAttachment } from "../../a-pagar/actions";
 import { ConfirmButton } from "@/components/confirm-button";
 import { AttachmentForm } from "./attachment-form";
+import { CategorizationRuleForm } from "../../regras/rule-form";
+import { suggestPattern } from "@/lib/finance/rules";
 
 export default async function EditTransactionPage({ params }: { params: Promise<{ workspaceId: string; id: string }> }) {
   const { workspaceId, id } = await params;
@@ -68,6 +70,23 @@ export default async function EditTransactionPage({ params }: { params: Promise<
           {formatBRL(tx.fine_cents)} · desconto {formatBRL(tx.discount_cents)}
         </p>
       )}
+      <details className="card">
+        <summary className="cursor-pointer font-bold">Criar regra para parecidos</summary>
+        <p className="mt-2 text-sm text-muted">Lançamentos futuros com descrição parecida recebem a mesma categoria e o mesmo contato automaticamente.</p>
+        <div className="mt-3">
+          <CategorizationRuleForm
+            compact
+            workspaceId={workspaceId}
+            options={options}
+            defaults={{
+              pattern: suggestPattern(tx.statement_description || tx.description),
+              categoryId: tx.category_id ?? undefined,
+              contactId: tx.contact_id ?? undefined,
+              direction: tx.direction > 0 && tx.type === "income" ? "in" : "out",
+            }}
+          />
+        </div>
+      </details>
       <section className="card space-y-3">
         <h2 className="font-bold">Comprovantes</h2>
         {attachments.length > 0 ? (

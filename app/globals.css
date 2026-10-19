@@ -20,6 +20,10 @@
   --danger: #c4473b;
   --danger-soft: #fbe7e4;
   --ring: #177a4c;
+  /* Séries de gráfico (validadas para daltonismo; ver dataviz) */
+  --series-income: #1baf7a;
+  --series-expense: #eb6834;
+  --series-balance: #2a78d6;
   color-scheme: light;
 }
 .dark {
@@ -38,7 +42,20 @@
   --danger: #ff8a7a;
   --danger-soft: #3d2420;
   --ring: #4fd894;
+  --series-income: #199e70;
+  --series-expense: #d95926;
+  --series-balance: #3987e5;
   color-scheme: dark;
+}
+
+@media print {
+  aside,
+  .no-print {
+    display: none !important;
+  }
+  body {
+    background: #fff;
+  }
 }
 
 @theme inline {

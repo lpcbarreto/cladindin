@@ -13,7 +13,9 @@ const NAV = [
   { href: "importacoes", label: "Importações" },
   { href: "cartoes", label: "Cartões" },
   { href: "contas", label: "Contas e cartões" },
+  { href: "relatorios", label: "Relatórios" },
   { href: "categorias", label: "Categorias" },
+  { href: "regras", label: "Regras" },
   { href: "contatos", label: "Contatos" },
   { href: "configuracoes", label: "Configurações" },
 ];

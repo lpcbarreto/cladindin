@@ -30,7 +30,7 @@ export default async function DashboardPage({ params }: { params: Promise<{ work
     // Transferências não são receita nem despesa
     supabase
       .from("transactions")
-      .select("id, type, direction, amount_cents, description, due_date, category:categories!category_id(name, parent:categories!parent_id(name))")
+      .select("id, type, direction, amount_cents, description, due_date, category:categories!category_id(name, parent:parent_id(name))")
       .eq("workspace_id", workspaceId)
       .is("deleted_at", null)
       .in("type", ["income", "expense"])
