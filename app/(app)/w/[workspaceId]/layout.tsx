@@ -5,6 +5,10 @@ import { ThemeToggle } from "@/components/theme-toggle";
 
 const NAV = [
   { href: "dashboard", label: "Dashboard" },
+  { href: "lancamentos", label: "Lançamentos" },
+  { href: "contas", label: "Contas e cartões" },
+  { href: "categorias", label: "Categorias" },
+  { href: "contatos", label: "Contatos" },
   { href: "configuracoes", label: "Configurações" },
 ];
 
