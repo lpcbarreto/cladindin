@@ -1,3 +1,5 @@
+import { redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
 import { LoginForm } from "./login-form";
 
 export default async function LoginPage({
@@ -7,6 +9,11 @@ export default async function LoginPage({
 }) {
   const { next, erro } = await searchParams;
   const safeNext = next?.startsWith("/") && !next.startsWith("//") ? next : "/";
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (user) redirect(safeNext);
   return (
     <main className="flex min-h-dvh items-center justify-center px-4">
       <div className="card w-full max-w-sm">

@@ -33,7 +33,8 @@ export function formatDateBR(iso: string | null | undefined): string {
 
 export function formatMonthBR(month: string): string {
   const [y, m] = month.split("-").map(Number);
-  return new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric", timeZone: "UTC" }).format(
+  const s = new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric", timeZone: "UTC" }).format(
     new Date(Date.UTC(y, m - 1, 1)),
   );
+  return s.charAt(0).toUpperCase() + s.slice(1);
 }

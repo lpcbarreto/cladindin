@@ -52,7 +52,7 @@ export default async function TransactionsPage({
           <Link className="btn-ghost px-3" href={link({ mes: shiftMonth(month, -1), pagina: undefined })} aria-label="Mês anterior">
             ‹
           </Link>
-          <span className="min-w-36 text-center capitalize">{formatMonthBR(month)}</span>
+          <span className="min-w-36 text-center">{formatMonthBR(month)}</span>
           <Link className="btn-ghost px-3" href={link({ mes: shiftMonth(month, 1), pagina: undefined })} aria-label="Próximo mês">
             ›
           </Link>

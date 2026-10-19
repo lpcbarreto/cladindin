@@ -73,7 +73,7 @@ export function TransactionForm({
         <>
           <label className="text-sm sm:col-span-1 lg:col-span-2">
             De
-            <select name="fromAccountId" required className="input mt-1">
+            <select key="from" name="fromAccountId" required defaultValue={options.accounts[0]?.id} className="input mt-1">
               {options.accounts.map((a) => (
                 <option key={a.id} value={a.id}>
                   {a.name}
@@ -83,7 +83,7 @@ export function TransactionForm({
           </label>
           <label className="text-sm sm:col-span-1 lg:col-span-2">
             Para
-            <select name="toAccountId" required defaultValue={options.accounts[1]?.id} className="input mt-1">
+            <select key="to" name="toAccountId" required defaultValue={options.accounts[1]?.id} className="input mt-1">
               {options.accounts.map((a) => (
                 <option key={a.id} value={a.id}>
                   {a.name}
@@ -96,7 +96,7 @@ export function TransactionForm({
         <>
           <label className="text-sm">
             Conta
-            <select name="accountId" required defaultValue={initial?.accountId} className="input mt-1">
+            <select key="account" name="accountId" required defaultValue={initial?.accountId} className="input mt-1">
               {options.accounts.map((a) => (
                 <option key={a.id} value={a.id}>
                   {a.name}
