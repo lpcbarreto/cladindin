@@ -1,14 +1,9 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { Logo, LogoMark } from "@/components/logo";
+import { Logo } from "@/components/logo";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { LoginForm } from "./login-form";
-
-const HIGHLIGHTS = [
-  "Importe extratos OFX sem duplicar nada",
-  "Contas a pagar e a receber num só lugar",
-  "Pessoal e empresa separados, com login para cada pessoa",
-];
+import { LoginHero } from "./login-hero";
 
 export default async function LoginPage({
   searchParams,
@@ -25,46 +20,37 @@ export default async function LoginPage({
 
   return (
     <main className="relative grid min-h-dvh lg:grid-cols-2">
-      <div className="absolute top-4 right-4 z-20 w-32">
+      <div className="absolute top-4 right-4 z-20 w-32" style={{ animation: "fade-in 600ms ease 1s both" }}>
         <ThemeToggle />
       </div>
-      <section className="relative hidden overflow-hidden bg-primary p-12 text-primary-fg lg:flex lg:flex-col lg:justify-between">
-        <div className="flex items-center gap-2 text-2xl font-extrabold tracking-tight">
-          <span className="coin-hover rounded-full bg-primary-fg/15 p-1">
-            <LogoMark size={36} />
-          </span>
-          cladindin
-        </div>
-        <div className="stagger relative z-10 max-w-md space-y-6">
-          <h1 className="text-4xl leading-tight font-extrabold">Seu dindin organizado, sem planilha e sem susto.</h1>
-          <ul className="space-y-3 text-base">
-            {HIGHLIGHTS.map((h) => (
-              <li key={h} className="flex items-start gap-3">
-                <span className="mt-1 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-accent text-xs font-black text-foreground">✓</span>
-                {h}
-              </li>
-            ))}
-          </ul>
-        </div>
-        <p className="relative z-10 text-sm opacity-75">Finanças pessoais e da sua pequena empresa.</p>
-        {/* Moedas decorativas */}
-        <div aria-hidden="true" className="drift pointer-events-none absolute -right-24 -bottom-24 h-96 w-96 rounded-full border-[28px] border-primary-fg/10" />
-        <div aria-hidden="true" className="coin-float pointer-events-none absolute top-24 -right-10 h-40 w-40 rounded-full bg-accent/25" />
-      </section>
 
-      <section className="flex items-center justify-center px-4 py-10">
-        <div className="page-enter w-full max-w-sm space-y-6">
+      <LoginHero />
+
+      <section className="relative flex items-center justify-center overflow-hidden px-4 py-10">
+        {/* Brilhos suaves atrás do formulário */}
+        <div aria-hidden="true" className="pointer-events-none absolute inset-0">
+          <div className="blob absolute top-[12%] -right-24 h-72 w-72 bg-primary/10 blur-2xl" />
+          <div className="blob absolute bottom-[8%] -left-20 h-64 w-64 bg-accent/15 blur-2xl" style={{ animationDelay: "-5s" }} />
+        </div>
+
+        <div className="stagger relative w-full max-w-sm space-y-6">
           <div className="lg:hidden">
             <Logo size={40} />
           </div>
           <div>
-            <h2 className="text-2xl font-extrabold">Que bom te ver!</h2>
+            <h2 className="text-2xl font-extrabold">
+              Que bom te ver!{" "}
+              <span aria-hidden="true" className="inline-block origin-[70%_70%]" style={{ animation: "wave-hand 1.8s ease-in-out 0.8s 2" }}>
+                👋
+              </span>
+            </h2>
             <p className="text-sm text-muted">Entre para acessar suas finanças.</p>
           </div>
-          {erro && <p className="rounded-xl bg-danger-soft p-3 text-sm text-danger">{erro}</p>}
-          <div className="card">
+          {erro && <p className="shake rounded-xl bg-danger-soft p-3 text-sm text-danger">{erro}</p>}
+          <div className="card transition-shadow duration-500 focus-within:shadow-[0_0_0_4px_color-mix(in_srgb,var(--primary)_14%,transparent),0_20px_40px_-20px_rgba(31,42,36,0.35)]">
             <LoginForm next={safeNext} />
           </div>
+          <p className="text-center text-xs text-muted">Seus dados ficam protegidos e separados por workspace.</p>
         </div>
       </section>
     </main>

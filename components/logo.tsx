@@ -17,8 +17,12 @@ export function Logo({ size = 32, className = "" }: { size?: number; className?:
       <span className="coin-hover inline-flex">
         <LogoMark size={size} />
       </span>
-      <span className="font-extrabold tracking-tight" style={{ fontSize: size * 0.62 }}>
-        cladin<span className="text-primary">din</span>
+      <span className="wave font-extrabold tracking-tight" style={{ fontSize: size * 0.62 }} aria-label="cladindin">
+        {"cladindin".split("").map((ch, i) => (
+          <span key={i} aria-hidden="true" className={`inline-block ${i >= 6 ? "text-primary" : ""}`} style={{ animationDelay: `${i * 40}ms` }}>
+            {ch}
+          </span>
+        ))}
       </span>
     </span>
   );

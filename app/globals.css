@@ -302,3 +302,189 @@ form :is(p, span).text-primary,
 form :is(p, span).text-danger {
   animation: pop-in 260ms var(--ease-spring) both;
 }
+
+/* ---------- Animações extras (login e detalhes) ---------- */
+@keyframes coin-fall {
+  0% {
+    transform: translate3d(0, -12vh, 0) rotateY(0) rotate(0);
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.9;
+  }
+  90% {
+    opacity: 0.9;
+  }
+  100% {
+    transform: translate3d(var(--sway, 30px), 112vh, 0) rotateY(720deg) rotate(25deg);
+    opacity: 0;
+  }
+}
+@keyframes word-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.6em) rotate(2deg);
+    filter: blur(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+}
+@keyframes check-pop {
+  0% {
+    transform: scale(0) rotate(-45deg);
+  }
+  70% {
+    transform: scale(1.25) rotate(8deg);
+  }
+  100% {
+    transform: scale(1) rotate(0);
+  }
+}
+@keyframes draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes grow-y {
+  from {
+    transform: scaleY(0);
+  }
+}
+@keyframes shine {
+  from {
+    transform: translateX(-120%) skewX(-20deg);
+  }
+  to {
+    transform: translateX(220%) skewX(-20deg);
+  }
+}
+@keyframes shake {
+  10%,
+  90% {
+    transform: translateX(-1px);
+  }
+  20%,
+  80% {
+    transform: translateX(3px);
+  }
+  30%,
+  50%,
+  70% {
+    transform: translateX(-5px);
+  }
+  40%,
+  60% {
+    transform: translateX(5px);
+  }
+}
+@keyframes blob {
+  0%,
+  100% {
+    border-radius: 42% 58% 63% 37% / 41% 44% 56% 59%;
+    transform: rotate(0) scale(1);
+  }
+  50% {
+    border-radius: 58% 42% 38% 62% / 55% 38% 62% 45%;
+    transform: rotate(25deg) scale(1.08);
+  }
+}
+@keyframes float-card {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-2deg);
+  }
+  50% {
+    transform: translateY(-12px) rotate(-1deg);
+  }
+}
+@keyframes pulse-ring {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 60%, transparent);
+  }
+  100% {
+    box-shadow: 0 0 0 14px transparent;
+  }
+}
+@keyframes letter-wave {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  40% {
+    transform: translateY(-4px);
+  }
+}
+
+@utility coin-fall {
+  animation: coin-fall var(--dur, 9s) linear var(--delay, 0s) infinite both;
+}
+@utility word-in {
+  display: inline-block;
+  animation: word-in 640ms var(--ease-out) both;
+}
+@utility check-pop {
+  animation: check-pop 520ms var(--ease-spring) both;
+}
+@utility draw-line {
+  stroke-dasharray: 400;
+  stroke-dashoffset: 400;
+  animation: draw 1.6s var(--ease-out) forwards;
+}
+@utility bar-rise {
+  transform-origin: bottom;
+  animation: grow-y 900ms var(--ease-spring) both;
+}
+@utility blob {
+  animation: blob 14s ease-in-out infinite;
+}
+@utility float-card {
+  animation: float-card 6s ease-in-out infinite;
+}
+@utility pulse-ring {
+  animation: pulse-ring 1.8s ease-out infinite;
+}
+@utility shake {
+  animation: shake 420ms ease both;
+}
+/* Brilho que passa pelo botão no hover */
+@utility shine {
+  position: relative;
+  overflow: hidden;
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    width: 40%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.35), transparent);
+    transform: translateX(-120%) skewX(-20deg);
+    pointer-events: none;
+  }
+  &:hover::after {
+    animation: shine 800ms var(--ease-out);
+  }
+}
+/* Letras do nome "pulam" em onda no hover do logo */
+.group:hover .wave > span {
+  animation: letter-wave 600ms var(--ease-out);
+}
+@keyframes wave-hand {
+  0%,
+  60%,
+  100% {
+    transform: rotate(0);
+  }
+  10%,
+  30% {
+    transform: rotate(16deg);
+  }
+  20%,
+  40% {
+    transform: rotate(-8deg);
+  }
+  50% {
+    transform: rotate(10deg);
+  }
+}
