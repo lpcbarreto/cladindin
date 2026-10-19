@@ -6,6 +6,7 @@ import { addDays, formatDateBR, monthRange, todayISO } from "@/lib/finance/dates
 type Tx = {
   id: string;
   type: "income" | "expense";
+  direction: 1 | -1;
   amount_cents: number;
   description: string;
   due_date: string;
@@ -19,7 +20,7 @@ export default async function DashboardPage({ params }: { params: Promise<{ work
   const { start, end } = monthRange(today.slice(0, 7));
   const in30 = addDays(today, 30);
 
-  const [balances, monthTx, pending] = await Promise.all([
+  const [balances, monthTx, pending, invoices] = await Promise.all([
     supabase
       .from("account_balances")
       .select("account_id, name, type, balance_cents")
@@ -29,7 +30,7 @@ export default async function DashboardPage({ params }: { params: Promise<{ work
     // Transferências não são receita nem despesa
     supabase
       .from("transactions")
-      .select("id, type, amount_cents, description, due_date, category:categories!category_id(name, parent:categories!parent_id(name))")
+      .select("id, type, direction, amount_cents, description, due_date, category:categories!category_id(name, parent:categories!parent_id(name))")
       .eq("workspace_id", workspaceId)
       .is("deleted_at", null)
       .in("type", ["income", "expense"])
@@ -38,14 +39,23 @@ export default async function DashboardPage({ params }: { params: Promise<{ work
       .lte("competence_date", end),
     supabase
       .from("transactions")
-      .select("id, type, amount_cents, description, due_date")
+      .select("id, type, direction, amount_cents, description, due_date")
       .eq("workspace_id", workspaceId)
       .is("deleted_at", null)
       .in("type", ["income", "expense"])
       .eq("status", "planned")
+      // Parcelas de cartão são cobradas pela fatura (abaixo), não uma a uma
+      .is("invoice_id", null)
       .lte("due_date", in30)
       .order("due_date")
       .limit(200),
+    supabase
+      .from("invoice_summaries")
+      .select("id, account_id, due_date, total_cents")
+      .eq("workspace_id", workspaceId)
+      .is("paid_at", null)
+      .lte("due_date", in30)
+      .gt("total_cents", 0),
   ]);
 
   const accounts = (balances.data ?? []).filter((a) => a.type !== "credit_card");
@@ -53,9 +63,19 @@ export default async function DashboardPage({ params }: { params: Promise<{ work
   const totalBalance = accounts.reduce((s, a) => s + a.balance_cents, 0);
   const txs = (monthTx.data ?? []) as unknown as Tx[];
   const income = txs.filter((t) => t.type === "income").reduce((s, t) => s + t.amount_cents, 0);
-  const expense = txs.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount_cents, 0);
+  // Estornos (despesa com sinal positivo) reduzem o gasto
+  const expense = txs.filter((t) => t.type === "expense").reduce((s, t) => s - t.direction * t.amount_cents, 0);
 
-  const pend = (pending.data ?? []) as Omit<Tx, "category">[];
+  const cardNames = new Map((balances.data ?? []).map((a) => [a.account_id, a.name]));
+  const invoiceDues = (invoices.data ?? []).map((i) => ({
+    id: `inv-${i.id}`,
+    type: "expense" as const,
+    direction: -1 as const,
+    amount_cents: Number(i.total_cents),
+    description: `Fatura ${cardNames.get(i.account_id) ?? "do cartão"}`,
+    due_date: i.due_date,
+  }));
+  const pend = [...((pending.data ?? []) as Omit<Tx, "category">[]), ...invoiceDues].sort((a, b) => a.due_date.localeCompare(b.due_date));
   const overdue = pend.filter((t) => t.due_date < today);
   const upcoming = pend.filter((t) => t.due_date >= today);
   const sum = (list: typeof pend, type: string, until?: string) =>
@@ -66,7 +86,7 @@ export default async function DashboardPage({ params }: { params: Promise<{ work
     .filter((t) => t.type === "expense")
     .forEach((t) => {
       const name = t.category ? (t.category.parent?.name ?? t.category.name) : "Sem categoria";
-      byCategory.set(name, (byCategory.get(name) ?? 0) + t.amount_cents);
+      byCategory.set(name, (byCategory.get(name) ?? 0) - t.direction * t.amount_cents);
     });
   const top = [...byCategory.entries()].sort((a, b) => b[1] - a[1]).slice(0, 6);
   const topMax = top[0]?.[1] ?? 1;

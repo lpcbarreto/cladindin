@@ -17,6 +17,7 @@ type Initial = {
   categoryId: string;
   contactId: string;
   notes: string;
+  refund?: boolean;
 };
 
 export function TransactionForm({
@@ -45,6 +46,7 @@ export function TransactionForm({
     <form ref={formRef} action={action} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
       <input type="hidden" name="workspaceId" value={workspaceId} />
       {initial && <input type="hidden" name="id" value={initial.id} />}
+      {initial?.refund && type === "expense" && <input type="hidden" name="refund" value="on" />}
 
       <fieldset className="flex gap-1 rounded-full bg-surface-2 p-1 text-sm font-semibold sm:col-span-2 lg:col-span-4">
         <legend className="sr-only">Tipo</legend>
@@ -153,9 +155,27 @@ export function TransactionForm({
           </label>
         </div>
       ) : (
-        <label className="flex items-center gap-2 text-sm">
-          <input type="checkbox" name="paid" defaultChecked /> Já foi pago/recebido
-        </label>
+        <>
+          {type !== "transfer" && (
+            <label className="text-sm">
+              Parcelas
+              <select name="installments" defaultValue="1" className="input mt-1" aria-describedby="parcelas-ajuda">
+                <option value="1">À vista</option>
+                {Array.from({ length: 23 }, (_, i) => i + 2).map((n) => (
+                  <option key={n} value={n}>
+                    {n}x (valor acima é o total)
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+          <label className="flex items-center gap-2 self-end pb-2 text-sm">
+            <input type="checkbox" name="paid" defaultChecked /> Já foi pago/recebido
+            <span id="parcelas-ajuda" className="sr-only">
+              No parcelado, só a primeira parcela é marcada como paga.
+            </span>
+          </label>
+        </>
       )}
 
       <div className="flex items-center gap-3 sm:col-span-2 lg:col-span-4">

@@ -42,7 +42,7 @@ export default async function TransactionsPage({
 
   // Totais da página atual, sem contar transferências
   const income = rows.filter((r) => r.type === "income" && r.status !== "cancelled").reduce((s, r) => s + r.amount_cents, 0);
-  const expense = rows.filter((r) => r.type === "expense" && r.status !== "cancelled").reduce((s, r) => s + r.amount_cents, 0);
+  const expense = rows.filter((r) => r.type === "expense" && r.status !== "cancelled").reduce((s, r) => s - r.direction * r.amount_cents, 0);
 
   return (
     <div className="space-y-6">

@@ -9,6 +9,7 @@ const NAV = [
   { href: "lancamentos", label: "Lançamentos" },
   { href: "importar", label: "Importar" },
   { href: "importacoes", label: "Importações" },
+  { href: "cartoes", label: "Cartões" },
   { href: "contas", label: "Contas e cartões" },
   { href: "categorias", label: "Categorias" },
   { href: "contatos", label: "Contatos" },

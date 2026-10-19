@@ -1,4 +1,5 @@
 import type { RowStatus } from "@/lib/importers/match";
+import type { CsvMapping } from "@/lib/importers/csv/parse";
 
 export type PreviewRow = {
   index: number;
@@ -11,10 +12,24 @@ export type PreviewRow = {
   suggestedCategoryId: string | null;
   include: boolean;
   note: string | null;
+  installment: { number: number; total: number; key: string } | null;
+  cardholder: string | null;
+};
+
+export type CsvInfo = {
+  headers: string[];
+  sample: string[][];
+  mapping: CsvMapping;
+  preset: string | null;
+  signature: string;
+  /** Nome do modelo salvo que foi aplicado, se houver. */
+  template: string | null;
+  skipped: number;
 };
 
 export type PreviewStatement = {
   key: string;
+  kind: "ofx" | "csv" | "pdf";
   source: "bank" | "credit_card";
   bankId: string | null;
   externalAccountId: string | null;
@@ -23,8 +38,12 @@ export type PreviewStatement = {
   endDate: string | null;
   balance: { amountCents: number; date: string } | null;
   accountId: string | null;
-  /** Data em que este mesmo arquivo já foi importado nesta conta, se for o caso. */
+  isCardAccount: boolean;
+  /** Vencimento sugerido da fatura (cartão). */
+  invoiceDueDate: string | null;
+  declaredTotalCents: number | null;
   sameFileImportedAt: string | null;
+  csv: CsvInfo | null;
   rows: PreviewRow[] | null;
 };
 
@@ -46,6 +65,9 @@ export type CommitResult =
       created: number;
       duplicates: number;
       reconciled: number;
+      projected: number;
+      invoiceId: string | null;
       balanceCheck: { statement: number; system: number; date: string } | null;
+      invoiceCheck: { declared: number; computed: number } | null;
     }
   | { ok: false; message: string };

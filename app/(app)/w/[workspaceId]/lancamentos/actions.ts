@@ -51,7 +51,13 @@ const transferSchema = baseSchema.extend({
   toAccountId: uuid,
 });
 
-const createSchema = z.discriminatedUnion("type", [txSchema, transferSchema]);
+const createSchema = z.discriminatedUnion("type", [
+  txSchema.extend({
+    // Valor informado é o TOTAL; dividido em N parcelas mensais
+    installments: z.coerce.number().int().min(1, "Parcelas inválidas").max(120, "Máximo de 120 parcelas").optional().catch(1),
+  }),
+  transferSchema,
+]);
 
 function revalidate(workspaceId: string) {
   revalidatePath(`/w/${workspaceId}`, "layout");
@@ -76,6 +82,22 @@ export async function createTransaction(_prev: FormState, form: FormData): Promi
       p_paid: paid,
     });
     if (error) return { ok: false, message: dbErrorMessage(error) };
+  } else if ((v.installments ?? 1) > 1) {
+    const { error } = await supabase.rpc("create_installments", {
+      p_workspace_id: v.workspaceId,
+      p_account_id: v.accountId,
+      p_type: v.type,
+      p_total_cents: v.amount,
+      p_count: v.installments,
+      p_first_date: v.dueDate,
+      p_description: v.description,
+      p_category_id: v.categoryId,
+      p_contact_id: v.contactId,
+      p_first_paid: paid,
+    });
+    if (error) return { ok: false, message: dbErrorMessage(error) };
+    revalidate(v.workspaceId);
+    return { ok: true, message: `Parcelamento em ${v.installments}x criado.` };
   } else {
     const { error } = await supabase.from("transactions").insert({
       workspace_id: v.workspaceId,
@@ -102,6 +124,8 @@ const updateSchema = txSchema.extend({
   id: uuid,
   status: z.enum(["planned", "paid", "cancelled"]),
   paidDate: isoDate.optional().or(z.literal("")),
+  /** Estorno/crédito: despesa com sinal positivo. */
+  refund: z.string().optional(),
 });
 
 export async function updateTransaction(_prev: FormState, form: FormData): Promise<FormState> {
@@ -115,7 +139,7 @@ export async function updateTransaction(_prev: FormState, form: FormData): Promi
     .update({
       account_id: v.accountId,
       type: v.type,
-      direction: v.type === "income" ? 1 : -1,
+      direction: v.type === "income" || v.refund === "on" ? 1 : -1,
       amount_cents: v.amount,
       description: v.description,
       notes: v.notes,

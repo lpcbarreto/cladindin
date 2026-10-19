@@ -44,6 +44,7 @@ export default async function EditTransactionPage({ params }: { params: Promise<
             categoryId: tx.category_id ?? "",
             contactId: tx.contact_id ?? "",
             notes: tx.notes ?? "",
+            refund: tx.type === "expense" && tx.direction === 1,
           }}
         />
       </div>

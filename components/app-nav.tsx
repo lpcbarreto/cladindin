@@ -9,6 +9,7 @@ const ICONS: Record<string, React.ReactNode> = {
   lancamentos: <path d="M4 6h16M4 12h16M4 18h10" />,
   importar: <path d="M12 3v12m0 0-4-4m4 4 4-4M5 21h14" />,
   importacoes: <path d="M12 8v4l3 2M21 12a9 9 0 1 1-3-6.7M21 4v5h-5" />,
+  cartoes: <path d="M3 6h18v12H3zM3 10h18M7 15h4" />,
   contas: <path d="M3 10h18M5 10V8l7-4 7 4v2M6 10v8m4-8v8m4-8v8m4-8v8M4 21h16" />,
   categorias: <path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM16.5 13a3.5 3.5 0 1 1 0 7 3.5 3.5 0 0 1 0-7z" />,
   contatos: <path d="M16 19v-1a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v1M9.5 10a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM21 19v-1a4 4 0 0 0-3-3.9M16 3.1a3.5 3.5 0 0 1 0 6.8" />,
