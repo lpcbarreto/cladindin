@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { loadWorkspaceContext } from "@/lib/workspace";
 import { formatBRL } from "@/lib/finance/money";
-import { addDays, formatDateBR, monthRange, todayISO } from "@/lib/finance/dates";
+import { addDays, formatDateBR, formatMonthBR, monthRange, shiftMonth, todayISO } from "@/lib/finance/dates";
+import { DashboardPrefs, OnboardingDismiss } from "@/components/dashboard-prefs";
 import { loadBudget } from "@/lib/budget-server";
 import { budgetStatus } from "@/lib/finance/budget";
 import { CountUp } from "@/components/count-up";
+import { loadProjection } from "@/lib/projection-server";
 
 type Tx = {
   id: string;
@@ -16,16 +18,25 @@ type Tx = {
   category: { name: string; parent: { name: string } | null } | null;
 };
 
-export default async function DashboardPage({ params }: { params: Promise<{ workspaceId: string }> }) {
+export default async function DashboardPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ workspaceId: string }>;
+  searchParams: Promise<{ mes?: string }>;
+}) {
   const { workspaceId } = await params;
+  const { mes } = await searchParams;
   const { supabase, current } = await loadWorkspaceContext(workspaceId);
   const today = todayISO();
-  const { start, end } = monthRange(today.slice(0, 7));
+  const month = mes && /^\d{4}-\d{2}$/.test(mes) ? mes : today.slice(0, 7);
+  const { start, end } = monthRange(month);
   const in30 = addDays(today, 30);
 
   // Tudo em paralelo: uma única ida ao banco por consulta, sem esperar uma pela outra
-  const [budgetRows, balances, monthTx, pending, invoices] = await Promise.all([
-    loadBudget(supabase, workspaceId, today.slice(0, 7)).catch(() => []),
+  const [projection, budgetRows, balances, monthTx, pending, invoices, txCount, importCount, recCount] = await Promise.all([
+    loadProjection(supabase, workspaceId, today, 30).catch(() => null),
+    loadBudget(supabase, workspaceId, month).catch(() => []),
     supabase
       .from("account_balances")
       .select("account_id, name, type, balance_cents")
@@ -61,6 +72,9 @@ export default async function DashboardPage({ params }: { params: Promise<{ work
       .is("paid_at", null)
       .lte("due_date", in30)
       .gt("total_cents", 0),
+    supabase.from("transactions").select("id", { count: "exact", head: true }).eq("workspace_id", workspaceId).is("deleted_at", null),
+    supabase.from("import_batches").select("id", { count: "exact", head: true }).eq("workspace_id", workspaceId),
+    supabase.from("recurrence_rules").select("id", { count: "exact", head: true }).eq("workspace_id", workspaceId),
   ]);
   const budgetAlerts = budgetRows.filter((b) => ["over", "attention"].includes(budgetStatus(b))).slice(0, 6);
 
@@ -99,20 +113,90 @@ export default async function DashboardPage({ params }: { params: Promise<{ work
 
   const kpis = [
     { label: "Saldo em contas", value: totalBalance, tone: totalBalance < 0 ? "text-danger" : "" },
-    { label: "Receitas do mês", value: income, tone: "text-primary" },
-    { label: "Despesas do mês", value: expense, tone: "text-danger" },
-    { label: "Resultado do mês", value: income - expense, tone: income - expense < 0 ? "text-danger" : "text-primary" },
+    { label: "Receitas", value: income, tone: "text-primary" },
+    { label: "Despesas", value: expense, tone: "text-danger" },
+    { label: "Resultado", value: income - expense, tone: income - expense < 0 ? "text-danger" : "text-primary" },
   ];
   const base = `/w/${workspaceId}`;
+  const steps = [
+    { done: (balances.data ?? []).length > 0, label: "Cadastre suas contas e cartões", href: `${base}/contas` },
+    { done: (importCount.count ?? 0) > 0, label: "Importe um extrato (OFX, CSV ou PDF)", href: `${base}/importar` },
+    { done: (txCount.count ?? 0) > 0, label: "Faça seu primeiro lançamento (aperte N)", href: `${base}/lancamentos` },
+    { done: (recCount.count ?? 0) > 0, label: "Cadastre contas fixas (aluguel, luz, salário)", href: `${base}/recorrencias` },
+    { done: budgetRows.some((b) => b.budget), label: "Defina um orçamento por categoria", href: `${base}/orcamento` },
+  ];
+  const stepsDone = steps.filter((st) => st.done).length;
+  const sections = [
+    { id: "kpis", label: "Saldo e resultado do mês" },
+    { id: "pagar", label: "A pagar e a receber" },
+    { id: "contas", label: "Saldo por conta" },
+    { id: "despesas", label: "Maiores despesas" },
+    { id: "orcamento", label: "Alertas de orçamento" },
+  ];
 
   return (
     <div className="space-y-6">
-      <div>
-        <p className="text-sm font-semibold text-muted">{current.name}</p>
-        <h1 className="text-3xl font-extrabold tracking-tight">Olá! Veja como está o seu dindin 👋</h1>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <p className="text-sm font-semibold text-muted">{current.name}</p>
+          <h1 className="text-3xl font-extrabold tracking-tight">Olá! Veja como está o seu dindin 👋</h1>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 rounded-full bg-surface-2 p-1 text-sm font-semibold">
+            <Link href={`${base}/dashboard?mes=${shiftMonth(month, -1)}`} className="rounded-full px-3 py-1 text-muted hover:text-foreground" aria-label="Mês anterior">
+              ‹
+            </Link>
+            <span className="px-2 capitalize">{formatMonthBR(month)}</span>
+            <Link href={`${base}/dashboard?mes=${shiftMonth(month, 1)}`} className="rounded-full px-3 py-1 text-muted hover:text-foreground" aria-label="Próximo mês">
+              ›
+            </Link>
+          </div>
+          <DashboardPrefs sections={sections} />
+        </div>
       </div>
 
-      <div className="stagger grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      {stepsDone < steps.length && (
+        <OnboardingDismiss>
+          <section className="card space-y-3 bg-primary-soft">
+            <div>
+              <h2 className="font-bold">
+                Primeiros passos · {stepsDone} de {steps.length}
+              </h2>
+              <p className="text-sm text-muted">Complete para o Cladindin trabalhar por você.</p>
+            </div>
+            <div className="h-2 overflow-hidden rounded-full bg-surface">
+              <div className="bar-grow h-2 rounded-full bg-primary" style={{ width: `${(stepsDone / steps.length) * 100}%` }} />
+            </div>
+            <ul className="grid gap-2 text-sm sm:grid-cols-2">
+              {steps.map((st) => (
+                <li key={st.label}>
+                  <Link
+                    href={st.href}
+                    className={`flex items-center gap-2 rounded-xl bg-surface px-3 py-2 ${st.done ? "text-muted line-through" : "font-semibold hover:underline"}`}
+                  >
+                    <span
+                      aria-hidden="true"
+                      className={`grid h-5 w-5 shrink-0 place-items-center rounded-full text-xs ${st.done ? "bg-primary text-primary-fg" : "border border-border"}`}
+                    >
+                      {st.done ? "✓" : ""}
+                    </span>
+                    {st.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </section>
+        </OnboardingDismiss>
+      )}
+
+      {projection?.firstNegative && (
+        <Link href={`${base}/projecao`} role="alert" className="card lift block border-danger/40 bg-danger-soft text-sm">
+          <b className="text-danger">Cuidado:</b> pelas contas previstas, o saldo fica negativo em <b>{formatDateBR(projection.firstNegative)}</b>{" "}
+          (mínimo de <b className="tabular-nums">{formatBRL(projection.lowest.balance)}</b>). Ver projeção →
+        </Link>
+      )}
+
+      <div data-section="kpis" className="stagger grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {kpis.map((k, i) =>
           i === 0 ? (
             <div key={k.label} className="relative overflow-hidden rounded-[1.25rem] bg-primary p-5 text-primary-fg shadow-sm">
@@ -130,7 +214,7 @@ export default async function DashboardPage({ params }: { params: Promise<{ work
       </div>
 
       <div className="stagger grid gap-4 lg:grid-cols-3">
-        <section className="card space-y-3">
+        <section data-section="pagar" className="card space-y-3">
           <h2 className="font-medium">A pagar e a receber</h2>
           <dl className="grid grid-cols-2 gap-y-2 text-sm">
             <dt className="text-muted">A pagar em 7 dias</dt>
@@ -163,7 +247,7 @@ export default async function DashboardPage({ params }: { params: Promise<{ work
           )}
         </section>
 
-        <section className="card space-y-3">
+        <section data-section="contas" className="card space-y-3">
           <h2 className="font-medium">Saldo por conta</h2>
           <ul className="space-y-2 text-sm">
             {accounts.map((a) => (
@@ -184,10 +268,18 @@ export default async function DashboardPage({ params }: { params: Promise<{ work
           </Link>
         </section>
 
-        <section className="card space-y-3">
+        <section data-section="despesas" className="card space-y-3">
           <h2 className="font-medium">Maiores despesas do mês</h2>
           {top.length === 0 ? (
-            <p className="text-sm text-muted">Sem despesas neste mês.</p>
+            <div className="py-4 text-center text-sm text-muted">
+              <p className="text-2xl" aria-hidden="true">
+                🌱
+              </p>
+              <p>Sem despesas neste mês.</p>
+              <p className="text-xs">
+                Aperte <kbd className="rounded bg-surface-2 px-1">N</kbd> para lançar a primeira.
+              </p>
+            </div>
           ) : (
             <ul className="space-y-2 text-sm">
               {top.map(([name, value]) => (
@@ -207,7 +299,7 @@ export default async function DashboardPage({ params }: { params: Promise<{ work
       </div>
 
       {budgetAlerts.length > 0 && (
-        <section className="card space-y-3">
+        <section data-section="orcamento" className="card space-y-3">
           <div className="flex items-center justify-between">
             <h2 className="font-bold">Orçamento do mês</h2>
             <Link href={`${base}/orcamento`} className="text-xs text-muted hover:underline">

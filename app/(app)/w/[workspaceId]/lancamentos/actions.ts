@@ -16,6 +16,7 @@ import {
 } from "@/lib/actions";
 import { parseMoneyToCents } from "@/lib/finance/money";
 import { todayISO } from "@/lib/finance/dates";
+import { rememberDeleted } from "../global-actions";
 
 const amount = z.string().transform((v, ctx) => {
   try {
@@ -197,7 +198,8 @@ export async function bulkAction(form: FormData) {
   } else if (v.op === "unpay") {
     await tx().update({ status: "planned", paid_date: null }).eq("workspace_id", v.workspaceId).in("id", ids);
   } else if (v.op === "delete") {
-    await tx().update({ deleted_at: new Date().toISOString() }).eq("workspace_id", v.workspaceId).in("id", ids);
+    const { error } = await tx().update({ deleted_at: new Date().toISOString() }).eq("workspace_id", v.workspaceId).in("id", ids);
+    if (!error) await rememberDeleted(v.workspaceId, ids);
   } else if (v.op === "categorize") {
     await supabase
       .from("transactions")

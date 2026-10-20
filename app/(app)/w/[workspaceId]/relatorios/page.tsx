@@ -37,6 +37,9 @@ export default async function ReportsPage({
           <h1 className="text-3xl font-extrabold tracking-tight">Relatórios</h1>
         </div>
         <div className="no-print flex gap-2">
+          <a href={`${base}/imposto`} className="btn-ghost">
+            Imposto de Renda
+          </a>
           <a href={`${base}/exportar?${qs({})}`} className="btn-ghost">
             Exportar CSV
           </a>

@@ -1,6 +1,7 @@
 import { loadWorkspaceContext, hasRole, ROLE_LABEL, type Role } from "@/lib/workspace";
 import { changeRole, removeMember, revokeInvite } from "./actions";
-import { DeleteWorkspaceForm, DemoDataForm, InviteForm, NewWorkspaceForm } from "./forms";
+import { DeleteWorkspaceForm, DemoDataForm, InviteForm, NewWorkspaceForm, NotificationPrefsForm } from "./forms";
+import { SecuritySettings } from "@/components/security-settings";
 import { ThemeToggle } from "@/components/theme-toggle";
 
 export default async function SettingsPage({ params }: { params: Promise<{ workspaceId: string }> }) {
@@ -22,6 +23,8 @@ export default async function SettingsPage({ params }: { params: Promise<{ works
         .is("accepted_at", null)
         .gt("expires_at", new Date().toISOString())
     : { data: [] };
+
+  const { data: prefs } = await supabase.from("notification_prefs").select("due_alerts, weekly_summary, days_before").eq("user_id", user.id).maybeSingle();
 
   return (
     <div className="space-y-8">
@@ -90,6 +93,17 @@ export default async function SettingsPage({ params }: { params: Promise<{ works
           )}
         </section>
       )}
+
+      <section className="card space-y-3">
+        <h2 className="font-medium">Avisos por e-mail</h2>
+        <p className="text-sm text-muted">Enviados para {user.email}. Valem para todos os seus workspaces.</p>
+        <NotificationPrefsForm prefs={prefs ?? { due_alerts: true, weekly_summary: true, days_before: 1 }} />
+      </section>
+
+      <section className="card space-y-3">
+        <h2 className="font-medium">Segurança</h2>
+        <SecuritySettings />
+      </section>
 
       <section className="card space-y-3">
         <h2 className="font-medium">Aparência</h2>

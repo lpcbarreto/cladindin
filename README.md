@@ -52,8 +52,10 @@ Para conhecer o sistema, abra **Configurações → Dados de demonstração** nu
 | `NEXT_PUBLIC_SUPABASE_URL` | todas | URL do projeto Supabase |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | todas | Chave **publishable** (pública; a segurança vem do RLS) |
 | `NEXT_PUBLIC_SITE_URL` | todas | URL base usada nos links de convite |
-| `SUPABASE_SERVICE_ROLE_KEY` | só servidor (Vercel) | Chave secreta, usada **apenas** pelo job diário de recorrências |
+| `SUPABASE_SERVICE_ROLE_KEY` | só servidor (Vercel) | Chave secreta, usada **apenas** pelos jobs diários (recorrências e avisos) |
 | `CRON_SECRET` | só servidor (Vercel) | Protege a rota do job diário |
+| `RESEND_API_KEY` | só servidor (Vercel) | Envia os avisos de vencimento e o resumo semanal ([resend.com](https://resend.com)); sem ela, nenhum e-mail é enviado |
+| `EMAIL_FROM` | só servidor (Vercel) | Remetente, ex.: `Cladindin <avisos@seudominio.com.br>` (domínio verificado no Resend) |
 
 O app em si nunca usa a chave secreta. As duas últimas variáveis são opcionais: sem elas, as telas completam os previstos quando são abertas.
 

@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { needsMfa } from "@/lib/mfa";
 import { Logo } from "@/components/logo";
 import { ResetForm } from "./reset-form";
 
@@ -8,6 +9,8 @@ export default async function ResetPasswordPage() {
   const { data } = await supabase.auth.getClaims();
   // Só chega aqui com a sessão aberta pelo link do e-mail
   if (!data?.claims?.sub) redirect("/login?erro=Link%20inv%C3%A1lido%20ou%20expirado");
+  // Com verificação em duas etapas, a troca de senha exige o código antes
+  if (await needsMfa(supabase, data.claims.aal)) redirect("/login/mfa?next=/redefinir-senha");
 
   return (
     <main className="flex min-h-dvh items-center justify-center px-4 py-10">

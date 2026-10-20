@@ -1,6 +1,7 @@
 import { cache } from "react";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { needsMfa } from "@/lib/mfa";
 
 export type Role = "owner" | "admin" | "editor" | "viewer";
 const RANK: Record<Role, number> = { owner: 4, admin: 3, editor: 2, viewer: 1 };
@@ -26,6 +27,7 @@ const loadSession = cache(async () => {
   const { data } = await supabase.auth.getClaims();
   const claims = data?.claims;
   if (!claims?.sub) return { supabase, user: null };
+  if (await needsMfa(supabase, claims.aal)) redirect("/login/mfa");
   return { supabase, user: { id: claims.sub, email: (claims.email as string | undefined) ?? null } };
 });
 

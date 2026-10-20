@@ -46,7 +46,7 @@ export const PAGE_SIZE = 50;
 const UUID_RE = /^[0-9a-f-]{36}$/i;
 
 export const TX_SELECT =
-  "id, type, direction, amount_cents, description, competence_date, due_date, paid_date, status, transfer_group_id, origin, reconciled, account:accounts(id, name), category:categories(id, name), contact:contacts(id, name)";
+  "id, type, direction, amount_cents, description, competence_date, due_date, paid_date, status, transfer_group_id, origin, reconciled, account:accounts(id, name), category:categories(id, name), contact:contacts(id, name), attachments(count)";
 
 export type TxRow = {
   id: string;
@@ -64,6 +64,7 @@ export type TxRow = {
   account: { id: string; name: string } | null;
   category: { id: string; name: string } | null;
   contact: { id: string; name: string } | null;
+  attachments?: { count: number }[];
 };
 
 /** Monta a consulta de lançamentos aplicando os filtros da URL (sempre validados). */

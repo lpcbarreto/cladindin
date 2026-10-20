@@ -90,9 +90,24 @@ export default async function EditTransactionPage({ params }: { params: Promise<
       <section className="card space-y-3">
         <h2 className="font-bold">Comprovantes</h2>
         {attachments.length > 0 ? (
-          <ul className="space-y-1 text-sm">
+          <ul className="grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-3">
             {attachments.map((a) => (
-              <li key={a.id} className="flex items-center justify-between gap-2">
+              <li key={a.id} className="space-y-2 rounded-2xl border border-border p-2">
+                {a.url && a.mime_type?.startsWith("image/") && a.mime_type !== "image/heic" ? (
+                  <a href={a.url} target="_blank" rel="noopener noreferrer" className="block overflow-hidden rounded-xl bg-surface-2">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={a.url} alt={`Comprovante ${a.file_name}`} className="h-40 w-full object-cover transition hover:scale-105" loading="lazy" />
+                  </a>
+                ) : a.url && a.mime_type === "application/pdf" ? (
+                  <object data={`${a.url}#toolbar=0&view=FitH`} type="application/pdf" className="pointer-events-none h-40 w-full rounded-xl bg-surface-2" aria-label={`Prévia de ${a.file_name}`}>
+                    <div className="grid h-40 place-items-center rounded-xl bg-surface-2 text-3xl">📄</div>
+                  </object>
+                ) : (
+                  <div className="grid h-40 place-items-center rounded-xl bg-surface-2 text-3xl" aria-hidden="true">
+                    📎
+                  </div>
+                )}
+                <div className="flex items-center justify-between gap-2">
                 {a.url ? (
                   <a href={a.url} target="_blank" rel="noopener noreferrer" className="truncate text-primary underline">
                     {a.file_name}
@@ -108,6 +123,7 @@ export default async function EditTransactionPage({ params }: { params: Promise<
                     Remover
                   </ConfirmButton>
                 </form>
+                </div>
               </li>
             ))}
           </ul>

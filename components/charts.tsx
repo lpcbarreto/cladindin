@@ -6,6 +6,7 @@ import {
   CartesianGrid,
   Line,
   LineChart,
+  ReferenceLine,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -79,7 +80,7 @@ export function FlowChart({ data }: { data: { month: string; income: number; exp
 }
 
 /** Evolução do saldo (série única: o título nomeia, sem legenda). */
-export function BalanceChart({ data }: { data: { date: string; balance: number }[] }) {
+export function BalanceChart({ data, zeroLine = false }: { data: { date: string; balance: number }[]; zeroLine?: boolean }) {
   const fmt = (d: string) => d.split("-").reverse().slice(0, 2).join("/");
   return (
     <div className="h-72" role="img" aria-label="Gráfico da evolução do saldo; os valores estão na tabela abaixo">
@@ -89,6 +90,7 @@ export function BalanceChart({ data }: { data: { date: string; balance: number }
           <XAxis dataKey="date" tickFormatter={fmt} minTickGap={32} {...axis} />
           <YAxis tickFormatter={axisMoney} width={72} {...axis} />
           <Tooltip content={<TooltipBox labelFormatter={(d) => d.split("-").reverse().join("/")} />} cursor={{ stroke: "var(--muted)", strokeDasharray: "3 3" }} />
+          {zeroLine && <ReferenceLine y={0} stroke="var(--danger)" strokeDasharray="4 4" />}
           <Line type="monotone" dataKey="balance" name="Saldo" stroke="var(--series-balance)" strokeWidth={2} dot={false} activeDot={{ r: 5, strokeWidth: 2, stroke: "var(--surface)" }} />
         </LineChart>
       </ResponsiveContainer>

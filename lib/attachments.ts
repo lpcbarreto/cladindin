@@ -43,7 +43,7 @@ export async function saveAttachment(supabase: SupabaseClient, workspaceId: stri
 export async function listAttachments(supabase: SupabaseClient, transactionId: string) {
   const { data } = await supabase
     .from("attachments")
-    .select("id, storage_path, file_name, size_bytes, created_at")
+    .select("id, storage_path, file_name, size_bytes, mime_type, created_at")
     .eq("transaction_id", transactionId)
     .order("created_at");
   if (!data?.length) return [];

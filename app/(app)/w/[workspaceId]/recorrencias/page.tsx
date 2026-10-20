@@ -1,4 +1,5 @@
 import { after } from "next/server";
+import { EmptyState } from "@/components/empty-state";
 import Link from "next/link";
 import { loadWorkspaceContext, hasRole } from "@/lib/workspace";
 import { loadOptions } from "@/lib/transactions";
@@ -178,7 +179,11 @@ export default async function RecurrencesPage({
             </div>
           );
         })}
-        {rules.length === 0 && <p className="text-sm text-muted">Nenhuma recorrência cadastrada ainda.</p>}
+        {rules.length === 0 && (
+          <div className="card">
+            <EmptyState icon="🔁" title="Nenhuma recorrência ainda" hint="Cadastre aluguel, luz, internet e salário uma vez só: o Cladindin cria os próximos meses sozinho." />
+          </div>
+        )}
       </div>
     </div>
   );

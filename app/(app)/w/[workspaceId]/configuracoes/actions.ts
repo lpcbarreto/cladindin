@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { dbErrorMessage, formObject, getActionClient, type FormState } from "@/lib/actions";
 
 export type ActionState = { ok: boolean; message: string; link?: string } | null;
 
@@ -105,4 +106,26 @@ export async function deleteWorkspace(_prev: ActionState, form: FormData): Promi
   const { error } = await supabase.rpc("delete_workspace", { p_workspace_id: workspaceId, p_confirm_name: confirmName });
   if (error) return { ok: false, message: error.message };
   redirect("/");
+}
+
+const prefsSchema = z.object({
+  dueAlerts: z.string().optional(),
+  weeklySummary: z.string().optional(),
+  daysBefore: z.coerce.number().int().min(0).max(7),
+});
+
+/** Preferências de avisos por e-mail (da pessoa, valem para todos os workspaces). */
+export async function saveNotificationPrefs(_prev: FormState, form: FormData): Promise<FormState> {
+  const parsed = prefsSchema.safeParse(formObject(form));
+  if (!parsed.success) return { ok: false, message: "Dados inválidos." };
+  const { supabase, user } = await getActionClient();
+  const { error } = await supabase.from("notification_prefs").upsert({
+    user_id: user.id,
+    due_alerts: parsed.data.dueAlerts === "on",
+    weekly_summary: parsed.data.weeklySummary === "on",
+    days_before: parsed.data.daysBefore,
+    updated_at: new Date().toISOString(),
+  });
+  if (error) return { ok: false, message: dbErrorMessage(error) };
+  return { ok: true, message: "Preferências salvas." };
 }

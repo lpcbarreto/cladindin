@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
-import { createInvite, createWorkspace, deleteWorkspace } from "./actions";
+import { createInvite, createWorkspace, deleteWorkspace, saveNotificationPrefs } from "./actions";
 import { loadDemoData } from "./demo";
 
 export function InviteForm({ workspaceId }: { workspaceId: string }) {
@@ -78,5 +78,35 @@ export function DemoDataForm({ workspaceId }: { workspaceId: string }) {
         {state && <p className={`text-sm ${state.ok ? "text-primary" : "text-danger"}`}>{state.message}</p>}
       </form>
     </section>
+  );
+}
+
+export function NotificationPrefsForm({ prefs }: { prefs: { due_alerts: boolean; weekly_summary: boolean; days_before: number } }) {
+  const [state, action, pending] = useActionState(saveNotificationPrefs, null);
+  return (
+    <form action={action} className="space-y-3 text-sm">
+      <label className="flex items-center gap-2">
+        <input type="checkbox" name="dueAlerts" defaultChecked={prefs.due_alerts} />
+        Avisar por e-mail as contas que vão vencer, com
+        <select name="daysBefore" defaultValue={prefs.days_before} className="input w-auto py-1" aria-label="Dias de antecedência">
+          {[0, 1, 2, 3, 5, 7].map((d) => (
+            <option key={d} value={d}>
+              {d === 0 ? "no dia" : d === 1 ? "1 dia" : `${d} dias`}
+            </option>
+          ))}
+        </select>
+        de antecedência
+      </label>
+      <label className="flex items-center gap-2">
+        <input type="checkbox" name="weeklySummary" defaultChecked={prefs.weekly_summary} />
+        Resumo semanal toda segunda-feira
+      </label>
+      <div className="flex items-center gap-3">
+        <button className="btn-ghost" disabled={pending}>
+          Salvar avisos
+        </button>
+        {state && <span className={state.ok ? "text-primary" : "text-danger"}>{state.message}</span>}
+      </div>
+    </form>
   );
 }

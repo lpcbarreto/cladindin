@@ -20,7 +20,7 @@ export function AttachmentForm({ workspaceId, id }: { workspaceId: string; id: s
       <button className="btn-ghost" disabled={pending}>
         {pending ? "Enviando..." : "Anexar"}
       </button>
-      <span className="text-xs text-muted">PDF ou imagem, até 10 MB</span>
+      <span className="text-xs text-muted">PDF ou imagem, até 10 MB. No celular, dá para tirar a foto na hora.</span>
       {state && <p className={`w-full ${state.ok ? "text-primary" : "text-danger"}`}>{state.message}</p>}
     </form>
   );

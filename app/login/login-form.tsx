@@ -54,7 +54,9 @@ export function LoginForm({ next }: { next: string }) {
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw new Error("E-mail ou senha incorretos.");
-        router.replace(next);
+        const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+        const needsCode = aal?.nextLevel === "aal2" && aal.currentLevel !== "aal2";
+        router.replace(needsCode ? `/login/mfa?next=${encodeURIComponent(next)}` : next);
         router.refresh();
       }
     } catch (err) {

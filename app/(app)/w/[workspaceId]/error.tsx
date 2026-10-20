@@ -2,11 +2,13 @@
 
 import Link from "next/link";
 import { useEffect } from "react";
+import { reportError } from "@/lib/report-error";
 
 export default function WorkspaceError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
   useEffect(() => {
     // Só o identificador: nunca dados financeiros no log
     console.error("Erro na página", error.digest ?? error.name);
+    reportError(error, error.digest);
   }, [error]);
 
   return (

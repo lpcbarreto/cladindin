@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { EmptyState } from "@/components/empty-state";
 import { loadWorkspaceContext, hasRole } from "@/lib/workspace";
 import { formatBRL } from "@/lib/finance/money";
 import { ACCOUNT_TYPE_LABEL, type AccountType } from "@/lib/finance/labels";
@@ -71,8 +72,8 @@ export default async function AccountsPage({ params }: { params: Promise<{ works
             })}
             {(balances ?? []).length === 0 && (
               <tr>
-                <td colSpan={5} className="p-6 text-center text-muted">
-                  Nenhuma conta ainda.
+                <td colSpan={5} className="p-2">
+                  <EmptyState icon="🏦" title="Nenhuma conta ainda" hint="Cadastre sua conta corrente, poupança, carteira ou cartão de crédito no formulário acima." />
                 </td>
               </tr>
             )}

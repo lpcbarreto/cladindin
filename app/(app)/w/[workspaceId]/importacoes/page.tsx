@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { EmptyState } from "@/components/empty-state";
 import { loadWorkspaceContext, hasRole } from "@/lib/workspace";
 import { formatBRL } from "@/lib/finance/money";
 import { formatDateBR } from "@/lib/finance/dates";
@@ -81,8 +82,13 @@ export default async function ImportHistoryPage({ params }: { params: Promise<{ 
             })}
             {(batches ?? []).length === 0 && (
               <tr>
-                <td colSpan={6} className="p-6 text-center text-muted">
-                  Nenhuma importação ainda.
+                <td colSpan={6} className="p-2">
+                  <EmptyState
+                    icon="📥"
+                    title="Nenhuma importação ainda"
+                    hint="Baixe o extrato no app do seu banco (OFX, CSV ou PDF) e traga tudo de uma vez, sem duplicar."
+                    action={{ href: `/w/${workspaceId}/importar`, label: "Importar agora" }}
+                  />
                 </td>
               </tr>
             )}
