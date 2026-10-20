@@ -39,7 +39,7 @@ export default async function WorkspaceLayout({
 
   return (
     <div className="min-h-dvh md:grid md:grid-cols-[260px_1fr]">
-      <aside className="flex flex-col gap-5 border-b border-border bg-surface p-4 md:sticky md:top-0 md:h-dvh md:border-r md:border-b-0 md:p-5">
+      <aside className="flex flex-col gap-5 border-b border-border bg-surface p-4 md:sticky md:top-0 md:h-dvh md:overflow-y-auto md:overscroll-contain md:border-r md:border-b-0 md:p-5">
         <div className="flex items-center justify-between">
           <Logo size={34} />
           <div className="w-32 md:hidden">
