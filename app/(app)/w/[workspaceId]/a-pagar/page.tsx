@@ -1,4 +1,5 @@
 import { after } from "next/server";
+import { SelectionBar } from "@/components/selection-bar";
 import Link from "next/link";
 import { loadWorkspaceContext, hasRole } from "@/lib/workspace";
 import { formatBRL } from "@/lib/finance/money";
@@ -141,7 +142,8 @@ export default async function PayablesPage({
       {canEdit && rows.length > 0 && (
         <form id="baixa-em-massa" action={settleMany} className="flex flex-wrap items-center gap-2 text-sm">
           <input type="hidden" name="workspaceId" value={workspaceId} />
-          <span className="text-muted">Selecionados:</span>
+          <SelectionBar formId="baixa-em-massa" />
+          <span className="text-muted">Com os selecionados:</span>
           <input type="date" name="paidDate" defaultValue={today} className="input w-44 py-1" aria-label="Data da baixa" />
           <button className="btn py-1.5">{mode === "pagar" ? "Marcar como pagos" : "Marcar como recebidos"}</button>
           <span className="text-xs text-muted">pelo valor integral</span>

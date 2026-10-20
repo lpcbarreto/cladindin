@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { SelectionBar } from "@/components/selection-bar";
 import { EmptyState } from "@/components/empty-state";
 import { loadWorkspaceContext, hasRole } from "@/lib/workspace";
 import { buildTxQuery, loadOptions, PAGE_SIZE, type TxFilters, type TxRow } from "@/lib/transactions";
@@ -110,11 +111,12 @@ export default async function TransactionsPage({
         </div>
       </form>
 
-      <form action={bulkAction} className="space-y-3">
+      <form id="lancamentos-massa" action={bulkAction} className="space-y-3">
         <input type="hidden" name="workspaceId" value={workspaceId} />
         {canEdit && (
           <div className="flex flex-wrap items-center gap-2 text-sm">
-            <span className="text-muted">Selecionados:</span>
+            <SelectionBar formId="lancamentos-massa" />
+            <span className="text-muted">Com os selecionados:</span>
             <button name="op" value="pay" className="btn-ghost py-1">
               Marcar pago
             </button>
