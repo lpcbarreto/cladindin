@@ -23,6 +23,10 @@ const monthLabel = (m: string) => {
   return new Intl.DateTimeFormat("pt-BR", { month: "short", timeZone: "UTC" }).format(new Date(Date.UTC(y, mo - 1, 1))).replace(".", "") + `/${String(y).slice(2)}`;
 };
 
+// Sem dados (tudo zero) o eixo repetia "R$ 0": abre uma faixa mínima de R$ 100
+const moneyDomain = ([min, max]: readonly number[]): [number, number] =>
+  min === max ? [Math.min(0, min), Math.max(min, 0) + 10000] : [Math.min(0, min), max];
+
 const axis = { stroke: "var(--muted)", fontSize: 12, tickLine: false, axisLine: false } as const;
 
 function TooltipBox({ active, payload, label, labelFormatter }: TooltipProps<number, string> & { labelFormatter?: (l: string) => string }) {
@@ -68,7 +72,7 @@ export function FlowChart({ data }: { data: { month: string; income: number; exp
           <BarChart data={data} barGap={2} barCategoryGap="22%">
             <CartesianGrid vertical={false} stroke="var(--border)" />
             <XAxis dataKey="month" tickFormatter={monthLabel} {...axis} />
-            <YAxis tickFormatter={axisMoney} width={72} {...axis} />
+            <YAxis tickFormatter={axisMoney} width={72} domain={moneyDomain} allowDecimals={false} {...axis} />
             <Tooltip cursor={{ fill: "var(--surface-2)" }} content={<TooltipBox labelFormatter={monthLabel} />} />
             <Bar dataKey="income" name="Receitas" fill="var(--series-income)" radius={[4, 4, 0, 0]} maxBarSize={28} />
             <Bar dataKey="expense" name="Despesas" fill="var(--series-expense)" radius={[4, 4, 0, 0]} maxBarSize={28} />
@@ -88,7 +92,7 @@ export function BalanceChart({ data, zeroLine = false }: { data: { date: string;
         <LineChart data={data}>
           <CartesianGrid vertical={false} stroke="var(--border)" />
           <XAxis dataKey="date" tickFormatter={fmt} minTickGap={32} {...axis} />
-          <YAxis tickFormatter={axisMoney} width={72} {...axis} />
+          <YAxis tickFormatter={axisMoney} width={72} domain={moneyDomain} allowDecimals={false} {...axis} />
           <Tooltip content={<TooltipBox labelFormatter={(d) => d.split("-").reverse().join("/")} />} cursor={{ stroke: "var(--muted)", strokeDasharray: "3 3" }} />
           {zeroLine && <ReferenceLine y={0} stroke="var(--danger)" strokeDasharray="4 4" />}
           <Line type="monotone" dataKey="balance" name="Saldo" stroke="var(--series-balance)" strokeWidth={2} dot={false} activeDot={{ r: 5, strokeWidth: 2, stroke: "var(--surface)" }} />
