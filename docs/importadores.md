@@ -52,3 +52,13 @@ Para um futuro **Open Finance** ou API bancária, a ideia é a mesma: um provedo
 ## PDF
 
 A leitura usa `unpdf` (texto do PDF) e um parser de linhas `data descrição valor`, que lê também o vencimento e o "total desta fatura". PDFs escaneados ou protegidos por senha não são suportados: a mensagem orienta a baixar CSV ou OFX. A estrutura permite plugar extração por LLM no futuro, **somente com opt-in explícito** do usuário.
+
+## PDF (extrato, fatura e comprovante)
+
+`loadPdf` (lib/importers/index.ts) extrai o texto com unpdf e escolhe o leitor:
+
+- **Comprovante** (Pix, boleto, transferência): `pdf/receipt.ts`. Vira um lançamento e o PDF é anexado a ele; se o lançamento já existe, só anexa.
+- **Fatura de cartão** (tem "fatura" e "vencimento"): `pdf/parse.ts`.
+- **Extrato bancário**: `pdf/statement.ts`, padrão "data descrição valor [D/C] [saldo]"; linhas sem data herdam a data anterior.
+
+PDF escaneado (imagem, sem texto) não é suportado: o usuário recebe uma mensagem explicando. Exemplos em `fixtures/pdf` (gere com `node fixtures/gerar-pdfs.mjs`).

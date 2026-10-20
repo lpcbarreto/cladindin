@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { getActionClient, isoDate, uuid } from "@/lib/actions";
+import { saveAttachment } from "@/lib/attachments";
 import { ImportError, loadBankFile, MAX_FILES, type ParsedTransaction } from "@/lib/importers";
 import { applyMapping, guessMapping, type CsvMapping } from "@/lib/importers/csv/parse";
 import { classifyRows, type ExistingTx } from "@/lib/importers/match";
@@ -166,6 +167,64 @@ export async function previewImport(form: FormData): Promise<{ ok: true; files: 
             transactions: parsed.transactions,
           }),
         );
+      } else if (loaded.kind === "pdf-statement") {
+        const key = `${fi}:0`;
+        const { statement: st, skippedLines, signGuessed } = loaded.result;
+        if (skippedLines) warnings.push(`${skippedLines} linha(s) do PDF ignorada(s).`);
+        if (signGuessed) warnings.push("O extrato não marca débito/crédito: deduzimos pela descrição. Confira as entradas e saídas.");
+        warnings.push("Leitura de PDF é aproximada: confira os lançamentos antes de importar.");
+        parser = "pdf-extrato";
+        statements.push(
+          await buildStatement(supabase, ws, form, accounts, hints, keywordCats, fileHash, {
+            key,
+            kind: "pdf",
+            source: "bank",
+            bankId: null,
+            externalAccountId: null,
+            label: `Extrato em PDF · ${st.transactions.length} lançamento(s)`,
+            startDate: st.startDate,
+            endDate: st.endDate,
+            balance: st.balance,
+            accountId: mapped(key),
+            declaredTotalCents: null,
+            pdfDueDate: null,
+            csv: null,
+            transactions: st.transactions,
+          }),
+        );
+      } else if (loaded.kind === "receipt") {
+        const key = `${fi}:0`;
+        const r = loaded.receipt;
+        parser = "pdf-comprovante";
+        statements.push({
+          ...(await buildStatement(supabase, ws, form, accounts, hints, keywordCats, fileHash, {
+            key,
+            kind: "pdf",
+            source: "bank",
+            bankId: null,
+            externalAccountId: null,
+            label: `Comprovante de ${r.kind} · ${r.date.split("-").reverse().join("/")}`,
+            startDate: r.date,
+            endDate: r.date,
+            balance: null,
+            accountId: mapped(key),
+            declaredTotalCents: null,
+            pdfDueDate: null,
+            csv: null,
+            transactions: [
+              {
+                externalId: null,
+                date: r.date,
+                amountCents: r.direction === "in" ? r.amountCents : -r.amountCents,
+                description: r.description,
+                kind: r.kind.toUpperCase(),
+                checkNum: null,
+                refNum: null,
+              },
+            ],
+          })),
+          receipt: { kind: r.kind, counterparty: r.counterparty },
+        });
       } else {
         const key = `${fi}:0`;
         const inv = loaded.invoice;
@@ -192,13 +251,13 @@ export async function previewImport(form: FormData): Promise<{ ok: true; files: 
           }),
         );
       }
-      out.push({ fileName, fileHash, parser, warnings, statements });
+      out.push({ fileIndex: fi, fileName, fileHash, parser, warnings, statements });
     } catch (e) {
       const err =
         e instanceof ImportError
           ? { message: e.message, hint: e.hint }
-          : { message: "Não foi possível ler o arquivo.", hint: "Confira se é um OFX, CSV ou PDF de fatura válido." };
-      out.push({ fileName, fileHash, parser: "-", warnings: [], statements: [], error: err });
+          : { message: "Não foi possível ler o arquivo.", hint: "Confira se é um OFX, CSV ou PDF (extrato, fatura ou comprovante) válido." };
+      out.push({ fileIndex: fi, fileName, fileHash, parser: "-", warnings: [], statements: [], error: err });
     }
   }
   return { ok: true, files: out };
@@ -484,4 +543,47 @@ export async function undoImport(form: FormData) {
   const { supabase } = await getActionClient();
   await supabase.rpc("undo_import", { p_batch_id: v.batchId });
   revalidatePath(`/w/${v.workspaceId}`, "layout");
+}
+
+const attachSchema = z.object({
+  workspaceId: uuid,
+  accountId: uuid,
+  fingerprint: z.string().regex(/^[a-f0-9]{40}$/),
+  txId: uuid.optional().or(z.literal("")),
+});
+
+/** Anexa o PDF do comprovante ao lançamento que ele gerou (ou ao que já existia). */
+export async function attachReceipt(form: FormData): Promise<{ ok: boolean; message: string; txId?: string }> {
+  const parsed = attachSchema.safeParse({
+    workspaceId: form.get("workspaceId"),
+    accountId: form.get("accountId"),
+    fingerprint: form.get("fingerprint"),
+    txId: form.get("txId") ?? "",
+  });
+  const file = form.get("file");
+  if (!parsed.success || !(file instanceof File)) return { ok: false, message: "Dados do comprovante inválidos." };
+  const v = parsed.data;
+  const { supabase } = await getActionClient();
+  let txId = v.txId || null;
+  if (!txId) {
+    const { data } = await supabase
+      .from("transactions")
+      .select("id")
+      .eq("workspace_id", v.workspaceId)
+      .eq("account_id", v.accountId)
+      .eq("fingerprint", v.fingerprint)
+      .is("deleted_at", null)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    txId = data?.id ?? null;
+  } else {
+    const { data } = await supabase.from("transactions").select("id").eq("id", txId).eq("workspace_id", v.workspaceId).maybeSingle();
+    txId = data?.id ?? null;
+  }
+  if (!txId) return { ok: false, message: "Não achamos o lançamento para anexar o comprovante." };
+  const saved = await saveAttachment(supabase, v.workspaceId, txId, file);
+  if (!saved.ok) return { ok: false, message: saved.message };
+  revalidatePath(`/w/${v.workspaceId}`, "layout");
+  return { ok: true, message: "Comprovante anexado.", txId };
 }

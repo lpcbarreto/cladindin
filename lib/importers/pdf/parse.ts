@@ -62,7 +62,8 @@ export function parseInvoiceText(text: string): PdfInvoice {
   return { transactions, dueDate, totalCents, skippedLines };
 }
 
-export async function parseInvoicePdf(bytes: Uint8Array): Promise<PdfInvoice> {
+/** Texto do PDF. Sem texto (PDF escaneado/foto) ou com senha, avisa o que fazer. */
+export async function extractPdfText(bytes: Uint8Array): Promise<string> {
   let text: string;
   try {
     const { extractText, getDocumentProxy } = await import("unpdf");
@@ -71,10 +72,20 @@ export async function parseInvoicePdf(bytes: Uint8Array): Promise<PdfInvoice> {
     text = Array.isArray(res.text) ? res.text.join("\n") : res.text;
   } catch {
     throw new ImportError(
-      "Não foi possível ler o PDF (pode estar protegido por senha ou ser uma imagem escaneada).",
-      "Baixe a fatura em CSV ou OFX no app do banco: é mais confiável que o PDF.",
+      "Não foi possível ler o PDF (pode estar protegido por senha).",
+      "Remova a senha (salvando uma cópia sem senha) ou baixe o arquivo em OFX/CSV no app do banco.",
     );
   }
+  if (text.replace(/\s/g, "").length < 30) {
+    throw new ImportError(
+      "Este PDF é uma imagem escaneada: não tem texto para ler.",
+      "Baixe o extrato/fatura direto do app do banco (PDF original, OFX ou CSV). Para guardar um comprovante escaneado, anexe-o no lançamento.",
+    );
+  }
+  return text;
+}
+
+export function parseInvoiceOrThrow(text: string): PdfInvoice {
   const parsed = parseInvoiceText(text);
   if (!parsed.transactions.length) {
     throw new ImportError(
@@ -83,4 +94,9 @@ export async function parseInvoicePdf(bytes: Uint8Array): Promise<PdfInvoice> {
     );
   }
   return parsed;
+}
+
+/** Fatura de cartão: fala em fatura e tem vencimento. */
+export function looksLikeInvoice(text: string) {
+  return /fatura/i.test(text) && DUE.test(text);
 }

@@ -44,10 +44,14 @@ export type PreviewStatement = {
   declaredTotalCents: number | null;
   sameFileImportedAt: string | null;
   csv: CsvInfo | null;
+  /** Comprovante em PDF: vira um lançamento e o arquivo é anexado a ele. */
+  receipt?: { kind: string; counterparty: string | null } | null;
   rows: PreviewRow[] | null;
 };
 
 export type PreviewFile = {
+  /** Posição do arquivo no envio (para anexar o PDF do comprovante depois). */
+  fileIndex: number;
   fileName: string;
   fileHash: string;
   parser: string;

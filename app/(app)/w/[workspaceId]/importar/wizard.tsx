@@ -6,7 +6,7 @@ import type { CategoryOption, Option } from "@/lib/transactions";
 import type { CsvMapping } from "@/lib/importers/csv/parse";
 import { formatBRL } from "@/lib/finance/money";
 import { formatDateBR } from "@/lib/finance/dates";
-import { commitImport, previewImport } from "./actions";
+import { attachReceipt, commitImport, previewImport } from "./actions";
 import type { CommitResult, PreviewFile, PreviewRow, PreviewStatement } from "./types";
 
 type Step = "upload" | "map" | "review" | "done";
@@ -37,7 +37,7 @@ export function ImportWizard({
   const [dues, setDues] = useState<Record<string, string>>({});
   const [templates, setTemplates] = useState<TemplateChoice>({});
   const [edits, setEdits] = useState<Edits>({});
-  const [results, setResults] = useState<{ label: string; accountId: string; result: CommitResult }[]>([]);
+  const [results, setResults] = useState<{ label: string; accountId: string; result: CommitResult; receipt?: { ok: boolean; message: string; txId?: string } }[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
   const [pending, start] = useTransition();
@@ -87,6 +87,20 @@ export function ImportWizard({
       const out: typeof results = [];
       for (const { file, s } of statements) {
         if (!s.accountId || !s.rows) continue;
+        const label = `${file.fileName} → ${accounts.find((a) => a.id === s.accountId)?.name}`;
+        // Comprovante que já existe no sistema (importado ou lançado à mão): só anexa o PDF
+        const receiptRow = s.receipt ? s.rows[0] : null;
+        const receiptIncluded = receiptRow ? edits[`${s.key}:${receiptRow.index}`]?.include : false;
+        if (receiptRow && !receiptIncluded && "txId" in receiptRow.status) {
+          const receipt = await sendReceipt(file.fileIndex, s.accountId, receiptRow.fingerprint, receiptRow.status.txId);
+          out.push({
+            label,
+            accountId: s.accountId,
+            result: { ok: true, batchId: "", created: 0, duplicates: 1, reconciled: 0, projected: 0, invoiceId: null, balanceCheck: null, invoiceCheck: null },
+            receipt,
+          });
+          continue;
+        }
         const rows = s.rows
           .filter((r) => edits[`${s.key}:${r.index}`]?.include)
           .map((r) => {
@@ -119,11 +133,29 @@ export function ImportWizard({
           template: s.csv && tpl?.save && tpl.name.trim() ? { name: tpl.name.trim(), signature: s.csv.signature, mapping: s.csv.mapping } : null,
           rows,
         });
-        out.push({ label: `${file.fileName} → ${accounts.find((a) => a.id === s.accountId)?.name}`, accountId: s.accountId, result });
+        let receipt: { ok: boolean; message: string; txId?: string } | undefined;
+        if (receiptRow && receiptIncluded && result.ok) {
+          const reconciled = receiptRow.status.kind === "reconcile" && edits[`${s.key}:${receiptRow.index}`]?.reconcile ? receiptRow.status.txId : undefined;
+          receipt = await sendReceipt(file.fileIndex, s.accountId, receiptRow.fingerprint, reconciled);
+        }
+        out.push({ label, accountId: s.accountId, result, receipt });
       }
       setResults(out);
       setStep("done");
     });
+  }
+
+  /** Envia o PDF do comprovante para ser anexado ao lançamento. */
+  async function sendReceipt(fileIndex: number, accountId: string, fingerprint: string, txId?: string) {
+    const f = files.filter((x) => x.size > 0)[fileIndex];
+    if (!f) return { ok: false, message: "Arquivo do comprovante não encontrado." };
+    const fd = new FormData();
+    fd.set("workspaceId", workspaceId);
+    fd.set("accountId", accountId);
+    fd.set("fingerprint", fingerprint);
+    if (txId) fd.set("txId", txId);
+    fd.set("file", f);
+    return attachReceipt(fd).catch(() => ({ ok: false, message: "Não foi possível anexar o comprovante." }));
   }
 
   function reset() {
@@ -172,7 +204,7 @@ export function ImportWizard({
             className={`flex cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed p-10 text-center text-sm transition ${dragging ? "border-primary bg-primary-soft" : "border-border hover:border-primary/50"}`}
           >
             <p className="font-bold">Arraste os arquivos aqui ou clique para escolher</p>
-            <p className="text-muted">Extratos em OFX ou CSV, faturas de cartão em OFX, CSV ou PDF. Até 10 arquivos de 5 MB.</p>
+            <p className="text-muted">Extratos (OFX, CSV ou PDF), faturas de cartão (OFX, CSV ou PDF) e comprovantes de Pix, boleto e transferência em PDF — o comprovante vira um lançamento com o PDF anexado. Até 10 arquivos de 5 MB.</p>
             <input
               ref={inputRef}
               type="file"
@@ -306,7 +338,7 @@ export function ImportWizard({
         <div className="card space-y-4">
           <h2 className="text-lg font-bold">Resumo da importação</h2>
           <ul className="space-y-4 text-sm">
-            {results.map(({ label, accountId, result }) => (
+            {results.map(({ label, accountId, result, receipt }) => (
               <li key={label} className="space-y-1">
                 <p className="font-semibold">{label}</p>
                 {result.ok ? (
@@ -315,6 +347,16 @@ export function ImportWizard({
                       {result.created} nova(s) · {result.reconciled} conciliada(s) · {result.duplicates} duplicada(s) ignorada(s)
                       {result.projected > 0 && <> · {result.projected} parcela(s) futura(s) projetada(s)</>}
                     </p>
+                    {receipt && (
+                      <p className={receipt.ok ? "text-primary" : "text-danger"}>
+                        📎 {receipt.message}{" "}
+                        {receipt.txId && (
+                          <Link href={`/w/${workspaceId}/lancamentos/${receipt.txId}`} className="underline">
+                            Ver lançamento
+                          </Link>
+                        )}
+                      </p>
+                    )}
                     {result.balanceCheck && <BalanceCheck {...result.balanceCheck} />}
                     {result.invoiceCheck && <InvoiceCheck {...result.invoiceCheck} />}
                     {result.invoiceId && (
@@ -529,6 +571,14 @@ function StatementReview({
           para conciliar, {counts.duplicate ?? 0} possível(is) duplicada(s), {counts.imported ?? 0} já importada(s) · selecionado:{" "}
           <b className="text-foreground">{formatBRL(selectedTotal)}</b>
         </p>
+        {s.receipt && (
+          <p className="rounded-xl bg-primary-soft px-3 py-2 text-xs">
+            📎 O PDF será anexado ao lançamento
+            {s.rows?.[0] && "txId" in s.rows[0].status && s.rows[0].status.kind !== "reconcile"
+              ? " que já existe (desmarque para não criar outro igual)."
+              : ". Confira a descrição e a categoria."}
+          </p>
+        )}
         {s.sameFileImportedAt && (
           <p className="text-xs font-semibold">
             Este mesmo arquivo já foi importado em {new Date(s.sameFileImportedAt).toLocaleDateString("pt-BR")}. Nada será duplicado.
