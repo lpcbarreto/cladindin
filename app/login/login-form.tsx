@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/client";
+import { pwnedCount, weakPasswordReason } from "@/lib/pwned";
 
 const emailSchema = z.string().email("E-mail inválido");
 type Mode = "entrar" | "cadastrar" | "link";
@@ -40,7 +41,9 @@ export function LoginForm({ next }: { next: string }) {
         if (error) throw error;
         setMsg({ ok: true, text: "Enviamos um link de acesso para o seu e-mail.", id: Date.now() });
       } else if (mode === "cadastrar") {
-        if (password.length < 8) throw new Error("A senha precisa ter ao menos 8 caracteres.");
+        const weak = weakPasswordReason(password);
+        if (weak) throw new Error(weak);
+        if ((await pwnedCount(password)) > 0) throw new Error("Essa senha já apareceu em vazamentos de dados na internet. Escolha outra, que você não use em nenhum outro site.");
         const { error, data } = await supabase.auth.signUp({
           email,
           password,

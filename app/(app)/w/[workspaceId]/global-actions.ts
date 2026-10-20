@@ -9,6 +9,7 @@ import { findRule } from "@/lib/finance/rules";
 import { todayISO } from "@/lib/finance/dates";
 import { formatBRL } from "@/lib/finance/money";
 import { loadRules } from "@/lib/rules-server";
+import { userRateLimit } from "@/lib/rate-limit";
 
 const UNDO_COOKIE = "desfazer";
 
@@ -18,7 +19,8 @@ const quickSchema = z.object({ workspaceId: uuid, text: z.string().trim().min(1)
 export async function quickAdd(workspaceId: string, text: string): Promise<{ ok: boolean; message: string; id?: string }> {
   const parsed = quickSchema.safeParse({ workspaceId, text });
   if (!parsed.success) return { ok: false, message: "Digite algo como “mercado 120 nubank”." };
-  const { supabase } = await getActionClient();
+  const { supabase, user } = await getActionClient();
+  if (!(await userRateLimit(supabase, user.id, "quick-add", 60, 60_000))) return { ok: false, message: "Muitas tentativas seguidas. Aguarde um pouco e tente de novo." };
   const { data: accounts } = await supabase
     .from("accounts")
     .select("id, name, type")
@@ -70,7 +72,8 @@ export async function searchAll(workspaceId: string, term: string): Promise<Sear
   if (!uuid.safeParse(workspaceId).success) return [];
   const t = term.trim().replace(/[%_,()]/g, "").slice(0, 60);
   if (t.length < 2) return [];
-  const { supabase } = await getActionClient();
+  const { supabase, user } = await getActionClient();
+  if (!(await userRateLimit(supabase, user.id, "search", 120, 60_000))) return [];
   const base = `/w/${workspaceId}`;
   const [txs, contacts, cats] = await Promise.all([
     supabase

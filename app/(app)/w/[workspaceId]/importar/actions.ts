@@ -12,7 +12,7 @@ import { classifyRows, type ExistingTx } from "@/lib/importers/match";
 import { normalizeDescription, sha256Hex, withFingerprints } from "@/lib/importers/normalize";
 import { detectInstallment, invoiceDatesForPurchase } from "@/lib/finance/installments";
 import { addDays } from "@/lib/finance/dates";
-import { rateLimit } from "@/lib/rate-limit";
+import { userRateLimit } from "@/lib/rate-limit";
 import { findRule, type CategorizationRule } from "@/lib/finance/rules";
 import { applyRulesToExisting, loadRules } from "@/lib/rules-server";
 import type { CommitResult, CsvInfo, PreviewFile, PreviewRow, PreviewStatement } from "./types";
@@ -56,7 +56,7 @@ export async function previewImport(form: FormData): Promise<{ ok: true; files: 
   const workspaceId = uuid.safeParse(form.get("workspaceId"));
   if (!workspaceId.success) return { ok: false, message: "Workspace inválido." };
   const { supabase, user } = await getActionClient();
-  if (!rateLimit(`preview:${user.id}`, 40, 60_000)) {
+  if (!(await userRateLimit(supabase, user.id, "preview", 40, 60_000))) {
     return { ok: false, message: "Muitas tentativas seguidas. Aguarde um minuto e tente de novo." };
   }
 
@@ -485,7 +485,7 @@ export async function commitImport(input: z.input<typeof commitSchema>): Promise
   if (!parsed.success) return { ok: false, message: "Dados da importação inválidos. Recomece o envio do arquivo." };
   const v = parsed.data;
   const { supabase, user } = await getActionClient();
-  if (!rateLimit(`commit:${user.id}`, 20, 60_000)) return { ok: false, message: "Muitas importações seguidas. Aguarde um minuto." };
+  if (!(await userRateLimit(supabase, user.id, "commit", 20, 60_000))) return { ok: false, message: "Muitas importações seguidas. Aguarde um minuto." };
 
   if (v.template) {
     await supabase.from("import_templates").upsert(
@@ -589,7 +589,8 @@ export async function attachReceipt(form: FormData): Promise<{ ok: boolean; mess
   const file = form.get("file");
   if (!parsed.success || !(file instanceof File)) return { ok: false, message: "Dados do comprovante inválidos." };
   const v = parsed.data;
-  const { supabase } = await getActionClient();
+  const { supabase, user } = await getActionClient();
+  if (!(await userRateLimit(supabase, user.id, "receipt", 30, 60_000))) return { ok: false, message: "Muitas tentativas seguidas. Aguarde um pouco e tente de novo." };
   let txId = v.txId || null;
   if (!txId) {
     const { data } = await supabase

@@ -11,7 +11,8 @@ const csp = [
   "style-src 'self' 'unsafe-inline'",
   `img-src 'self' data: blob: ${supabase}`,
   "font-src 'self' data:",
-  `connect-src 'self' ${supabase} ${supabase.replace("https://", "wss://")}`,
+  // pwnedpasswords: checagem de senha vazada (só 5 caracteres do hash saem do navegador)
+  `connect-src 'self' ${supabase} ${supabase.replace("https://", "wss://")} https://api.pwnedpasswords.com`,
   // Prévia de comprovante em PDF (link temporário do Storage)
   `object-src ${supabase}`,
   `frame-src ${supabase}`,

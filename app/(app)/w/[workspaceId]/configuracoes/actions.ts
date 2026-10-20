@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { userRateLimit } from "@/lib/rate-limit";
 import { dbErrorMessage, formObject, getActionClient, type FormState } from "@/lib/actions";
 
 export type ActionState = { ok: boolean; message: string; link?: string } | null;
@@ -22,6 +23,7 @@ export async function createInvite(_prev: ActionState, form: FormData): Promise<
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return { ok: false, message: "Sessão expirada." };
+  if (!(await userRateLimit(supabase, user.id, "invite", 20, 3_600_000))) return { ok: false, message: "Muitos convites em pouco tempo. Tente de novo em uma hora." };
 
   const { data, error } = await supabase
     .from("invites")
@@ -73,6 +75,11 @@ export async function createWorkspace(_prev: ActionState, form: FormData): Promi
   const parsed = wsSchema.safeParse(Object.fromEntries(form));
   if (!parsed.success) return { ok: false, message: parsed.error.issues[0].message };
   const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, message: "Sessão expirada." };
+  if (!(await userRateLimit(supabase, user.id, "workspace", 10, 3_600_000))) return { ok: false, message: "Muitos workspaces criados em pouco tempo. Tente de novo mais tarde." };
   const { data, error } = await supabase.rpc("create_workspace", { p_name: parsed.data.name, p_kind: parsed.data.kind });
   if (error || !data) return { ok: false, message: "Não foi possível criar o workspace." };
   redirect(`/w/${data}/dashboard`);

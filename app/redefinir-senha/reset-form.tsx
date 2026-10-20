@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { pwnedCount, weakPasswordReason } from "@/lib/pwned";
 
 export function ResetForm() {
   const router = useRouter();
@@ -14,9 +15,14 @@ export function ResetForm() {
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setMsg(null);
-    if (password.length < 8) return setMsg({ ok: false, text: "A senha precisa ter ao menos 8 caracteres.", id: Date.now() });
+    const weak = weakPasswordReason(password);
+    if (weak) return setMsg({ ok: false, text: weak, id: Date.now() });
     if (password !== confirm) return setMsg({ ok: false, text: "As senhas não conferem.", id: Date.now() });
     setLoading(true);
+    if ((await pwnedCount(password)) > 0) {
+      setLoading(false);
+      return setMsg({ ok: false, text: "Essa senha já apareceu em vazamentos de dados na internet. Escolha outra, que você não use em nenhum outro site.", id: Date.now() });
+    }
     const { error } = await createClient().auth.updateUser({ password });
     setLoading(false);
     if (error) return setMsg({ ok: false, text: "Não foi possível trocar a senha. Peça um novo link.", id: Date.now() });

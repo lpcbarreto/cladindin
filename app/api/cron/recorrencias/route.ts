@@ -42,6 +42,8 @@ export async function GET(request: NextRequest) {
       failed++;
     }
   }
+  // Faxina do limite de tentativas (registros com mais de 1 dia)
+  await supabase.rpc("purge_rate_limit_hits");
   // Só contagens no log: nada de dados financeiros
   return NextResponse.json({ rules: data?.length ?? 0, created, failed });
 }

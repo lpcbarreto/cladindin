@@ -1,5 +1,6 @@
 "use server";
 
+import { userRateLimit } from "@/lib/rate-limit";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { dbErrorMessage, getActionClient, isoDate, uuid, type FormState } from "@/lib/actions";
@@ -100,7 +101,8 @@ export async function addAttachment(_prev: FormState, form: FormData): Promise<F
   const v = attachSchema.safeParse({ workspaceId: form.get("workspaceId"), id: form.get("id") });
   const file = form.get("receipt");
   if (!v.success || !(file instanceof File) || file.size === 0) return { ok: false, message: "Escolha um arquivo." };
-  const { supabase } = await getActionClient();
+  const { supabase, user } = await getActionClient();
+  if (!(await userRateLimit(supabase, user.id, "attachment", 30, 60_000))) return { ok: false, message: "Muitas tentativas seguidas. Aguarde um pouco e tente de novo." };
   const res = await saveAttachment(supabase, v.data.workspaceId, v.data.id, file);
   revalidatePath(`/w/${v.data.workspaceId}/lancamentos/${v.data.id}`);
   return res.ok ? { ok: true, message: "Comprovante anexado." } : { ok: false, message: res.message };
