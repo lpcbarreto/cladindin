@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { safeNext as toSafeNext } from "@/lib/safe-next";
 import { Logo } from "@/components/logo";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { LoginForm } from "./login-form";
@@ -11,7 +12,7 @@ export default async function LoginPage({
   searchParams: Promise<{ next?: string; erro?: string }>;
 }) {
   const { next, erro } = await searchParams;
-  const safeNext = next?.startsWith("/") && !next.startsWith("//") ? next : "/";
+  const safeNext = toSafeNext(next);
   const supabase = await createClient();
   const { data: session } = await supabase.auth.getClaims();
   const user = session?.claims?.sub ? { id: session.claims.sub } : null;
