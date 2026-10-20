@@ -17,6 +17,7 @@ export function LoginForm({ next }: { next: string }) {
   const [name, setName] = useState("");
   const [msg, setMsg] = useState<{ ok: boolean; text: string; id: number } | null>(null);
   const [loading, setLoading] = useState(false);
+  const [forgot, setForgot] = useState(false);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -27,7 +28,14 @@ export function LoginForm({ next }: { next: string }) {
     const supabase = createClient();
     const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`;
     try {
-      if (mode === "link") {
+      if (forgot) {
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent("/redefinir-senha")}`,
+        });
+        if (error) throw error;
+        // Mesma resposta exista ou não a conta: não revela quais e-mails estão cadastrados
+        setMsg({ ok: true, text: "Se houver uma conta com esse e-mail, enviamos um link para criar uma nova senha.", id: Date.now() });
+      } else if (mode === "link") {
         const { error } = await supabase.auth.signInWithOtp({ email, options: { emailRedirectTo: redirectTo } });
         if (error) throw error;
         setMsg({ ok: true, text: "Enviamos um link de acesso para o seu e-mail.", id: Date.now() });
@@ -75,6 +83,7 @@ export function LoginForm({ next }: { next: string }) {
             type="button"
             onClick={() => {
               setMode(m);
+              setForgot(false);
               setMsg(null);
             }}
             aria-pressed={mode === m}
@@ -96,7 +105,7 @@ export function LoginForm({ next }: { next: string }) {
         value={email}
         onChange={(e) => setEmail(e.target.value)}
       />
-      {mode !== "link" && (
+      {mode !== "link" && !forgot && (
         <input
           className="input"
           type="password"
@@ -106,6 +115,20 @@ export function LoginForm({ next }: { next: string }) {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
         />
+      )}
+      {mode === "entrar" && (
+        <div className="flex justify-end">
+          <button
+            type="button"
+            onClick={() => {
+              setForgot((f) => !f);
+              setMsg(null);
+            }}
+            className="text-xs font-semibold text-primary hover:underline"
+          >
+            {forgot ? "Voltar para o login" : "Esqueci minha senha"}
+          </button>
+        </div>
       )}
       {msg && (
         // key muda a cada mensagem: erros repetidos tremem de novo
@@ -119,6 +142,8 @@ export function LoginForm({ next }: { next: string }) {
             <span aria-hidden="true" className="h-4 w-4 animate-spin rounded-full border-2 border-primary-fg/40 border-t-primary-fg" />
             Aguarde...
           </>
+        ) : forgot ? (
+          "Enviar link de recuperação"
         ) : mode === "link" ? (
           "Enviar link"
         ) : (
