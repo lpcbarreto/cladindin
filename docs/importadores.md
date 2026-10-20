@@ -62,3 +62,7 @@ A leitura usa `unpdf` (texto do PDF) e um parser de linhas `data descrição val
 - **Extrato bancário**: `pdf/statement.ts`, padrão "data descrição valor [D/C] [saldo]"; linhas sem data herdam a data anterior.
 
 PDF escaneado (imagem, sem texto) não é suportado: o usuário recebe uma mensagem explicando. Exemplos em `fixtures/pdf` (gere com `node fixtures/gerar-pdfs.mjs`).
+
+## CNPJ no histórico
+
+Ao pré-visualizar, `extractCnpj` (lib/finance/cnpj.ts) procura um CNPJ válido na descrição (nunca CPF). `lookupCompanies` (lib/cnpj-server.ts) consulta a BrasilAPI (dados públicos da Receita, cache de 30 dias) e a atividade principal (CNAE) vira a categoria sugerida via `categoryNamesForCnae`. Prioridade: regra do usuário > histórico > atividade do CNPJ > palavras-chave. Ao gravar, o contato da empresa é criado (com o CNPJ) e ligado aos lançamentos.

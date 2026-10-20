@@ -115,6 +115,7 @@ export function ImportWizard({
               reconcileTxId: r.status.kind === "reconcile" && e.reconcile ? r.status.txId : null,
               cardholder: r.cardholder,
               installment: r.installment,
+              company: r.company ? { cnpj: r.company.cnpj, name: r.company.name } : null,
             };
           });
         const tpl = templates[s.key];
@@ -629,6 +630,12 @@ function StatementReview({
                         </span>
                       )}
                       {r.cardholder && <span className="rounded-full bg-surface-2 px-2 py-0.5 text-muted">{r.cardholder}</span>}
+                      {r.company && (
+                        <span className="rounded-full bg-accent-soft px-2 py-0.5 text-foreground" title={r.company.activity ?? undefined}>
+                          🏢 {r.company.name}
+                          {r.company.activity && <span className="text-muted"> · {r.company.activity}</span>}
+                        </span>
+                      )}
                     </div>
                     {r.status.kind === "reconcile" && (
                       <label className="mt-1 flex items-center gap-1 text-xs text-muted">

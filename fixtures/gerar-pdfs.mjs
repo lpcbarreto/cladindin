@@ -2,7 +2,7 @@
 import { writeFileSync } from "node:fs";
 
 function makePdf(lines) {
-  const esc = (s) => s.replace(/[\()]/g, (c) => `\${c}`);
+  const esc = (s) => s.replace(/[\\()]/g, (ch) => "\\" + ch);
   const content = ["BT", "/F1 10 Tf", "40 800 Td", "14 TL", ...lines.map((l) => `(${esc(l)}) Tj T*`), "ET"].join("\n");
   const objs = [
     "<< /Type /Catalog /Pages 2 0 R >>",

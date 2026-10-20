@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { getActionClient, isoDate, uuid } from "@/lib/actions";
 import { saveAttachment } from "@/lib/attachments";
+import { categoryNamesForCnae, extractCnpj } from "@/lib/finance/cnpj";
+import { lookupCompanies } from "@/lib/cnpj-server";
 import { ImportError, loadBankFile, MAX_FILES, type ParsedTransaction } from "@/lib/importers";
 import { applyMapping, guessMapping, type CsvMapping } from "@/lib/importers/csv/parse";
 import { classifyRows, type ExistingTx } from "@/lib/importers/match";
@@ -27,6 +29,12 @@ const KEYWORD_CATEGORIES: [RegExp, string][] = [
 ];
 
 type Supabase = Awaited<ReturnType<typeof getActionClient>>["supabase"];
+const foldName = (s: string) =>
+  s
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
 type Account = { id: string; type: string; closing_day: number | null; due_day: number | null };
 type IncomingTx = ParsedTransaction & { installment?: string | null; cardholder?: string | null };
 
@@ -72,6 +80,7 @@ export async function previewImport(form: FormData): Promise<{ ok: true; files: 
   const hints = Object.assign(await loadCategoryHints(supabase, ws), {
     rules: await loadRules(supabase, ws),
     kinds: new Map((cats ?? []).map((c) => [c.id as string, c.kind as string])),
+    byName: new Map((cats ?? []).map((c) => [`${c.kind}:${foldName(c.name)}`, c.id as string])),
   });
   const keywordCats = KEYWORD_CATEGORIES.flatMap(([re, name]) => {
     const c = (cats ?? []).find((x) => x.kind === "expense" && x.name.toLowerCase() === name.toLowerCase());
@@ -293,7 +302,7 @@ async function buildStatement(
   ws: string,
   form: FormData,
   accounts: Map<string, Account>,
-  hints: Map<string, string> & { rules: CategorizationRule[]; kinds: Map<string, string> },
+  hints: Map<string, string> & { rules: CategorizationRule[]; kinds: Map<string, string>; byName: Map<string, string> },
   keywordCats: [RegExp, string][],
   fileHash: string,
   input: StatementInput,
@@ -330,6 +339,12 @@ async function buildStatement(
   const incoming = withFingerprints(accountId, transactions).map((t, index) => ({ ...t, index }));
   const existing = await loadExisting(supabase, ws, accountId, incoming);
   const statuses = classifyRows(incoming, existing);
+  // CNPJ no histórico → empresa e atividade (CNAE) → categoria
+  const companies = await lookupCompanies(
+    supabase,
+    ws,
+    incoming.map((t) => extractCnpj(t.description)).filter((c): c is string => !!c),
+  );
 
   const rows: PreviewRow[] = incoming.map((t) => {
     const status = statuses.get(t.index) ?? { kind: "new" as const };
@@ -348,10 +363,18 @@ async function buildStatement(
     const installment = inst && t.amountCents < 0 ? { number: inst.number, total: inst.total, key: inst.base } : null;
     // Regras do usuário têm prioridade; depois histórico; depois palavras-chave de encargos
     const rule = findRule(hints.rules, { description: t.description, amountCents: t.amountCents, accountId });
+    const kind = isCard || t.amountCents < 0 ? "expense" : "income";
+    const cnpj = extractCnpj(t.description);
+    const company = cnpj ? (companies.get(cnpj) ?? null) : null;
+    const byActivity =
+      kind === "expense" && company
+        ? (categoryNamesForCnae(company.cnae).map((n) => hints.byName.get(`expense:${foldName(n)}`)).find(Boolean) ?? null)
+        : null;
     const suggested =
-      (rule?.categoryId && hints.kinds.get(rule.categoryId) === (isCard || t.amountCents < 0 ? "expense" : "income") ? rule.categoryId : null) ??
+      (rule?.categoryId && hints.kinds.get(rule.categoryId) === kind ? rule.categoryId : null) ??
       hints.get(installment?.key ?? norm) ??
       hints.get(norm) ??
+      byActivity ??
       keywordCats.find(([re]) => re.test(raw))?.[1] ??
       null;
     return {
@@ -367,6 +390,7 @@ async function buildStatement(
       note,
       installment,
       cardholder: t.cardholder ?? null,
+      company: company ? { cnpj: company.cnpj, name: company.name, activity: company.activity, contactId: company.contactId } : null,
     };
   });
   return { ...base, rows, sameFileImportedAt: prev?.created_at ?? null };
@@ -449,6 +473,7 @@ const commitSchema = z.object({
         reconcileTxId: uuid.nullable(),
         cardholder: z.string().max(80).nullable(),
         installment: z.object({ number: z.number().int().min(1), total: z.number().int().min(2).max(99), key: z.string().max(200) }).nullable(),
+        company: z.object({ cnpj: z.string().regex(/^\d{14}$/), name: z.string().trim().min(1).max(120) }).nullable().optional(),
       }),
     )
     .max(20_000),
@@ -511,6 +536,7 @@ export async function commitImport(input: z.input<typeof commitSchema>): Promise
     return { ok: false, message: "Não foi possível gravar a importação." };
   }
   const d = data as { batch_id: string; new: number; duplicates: number; reconciled: number; projected: number; invoice_id: string | null };
+  if (d.new > 0) await linkCompanies(supabase, v.workspaceId, v.accountId, v.rows);
   // Regras também definem contato e preenchem o que ficou sem categoria
   if (d.new > 0) await applyRulesToExisting(supabase, v.workspaceId, { onlyEmpty: true });
 
@@ -586,4 +612,43 @@ export async function attachReceipt(form: FormData): Promise<{ ok: boolean; mess
   if (!saved.ok) return { ok: false, message: saved.message };
   revalidatePath(`/w/${v.workspaceId}`, "layout");
   return { ok: true, message: "Comprovante anexado.", txId };
+}
+
+/** Cria (se preciso) o contato da empresa pelo CNPJ e liga aos lançamentos importados sem contato. */
+async function linkCompanies(
+  supabase: Supabase,
+  ws: string,
+  accountId: string,
+  rows: { fingerprint: string; amountCents: number; company?: { cnpj: string; name: string } | null }[],
+) {
+  const withCompany = rows.filter((r) => r.company);
+  if (!withCompany.length) return;
+  const cnpjs = [...new Set(withCompany.map((r) => r.company!.cnpj))];
+  const { data: existing } = await supabase.from("contacts").select("id, document").eq("workspace_id", ws).in("document", cnpjs);
+  const idOf = new Map((existing ?? []).map((c) => [c.document as string, c.id as string]));
+  const missing = cnpjs.filter((c) => !idOf.has(c));
+  if (missing.length) {
+    const { data: created } = await supabase
+      .from("contacts")
+      .insert(
+        missing.map((cnpj) => {
+          const r = withCompany.find((x) => x.company!.cnpj === cnpj)!;
+          return { workspace_id: ws, name: r.company!.name, document: cnpj, is_supplier: r.amountCents < 0, is_customer: r.amountCents > 0 };
+        }),
+      )
+      .select("id, document");
+    for (const c of created ?? []) idOf.set(c.document as string, c.id as string);
+  }
+  for (const cnpj of cnpjs) {
+    const contactId = idOf.get(cnpj);
+    if (!contactId) continue;
+    const fps = withCompany.filter((r) => r.company!.cnpj === cnpj).map((r) => r.fingerprint);
+    await supabase
+      .from("transactions")
+      .update({ contact_id: contactId })
+      .eq("workspace_id", ws)
+      .eq("account_id", accountId)
+      .in("fingerprint", fps)
+      .is("contact_id", null);
+  }
 }

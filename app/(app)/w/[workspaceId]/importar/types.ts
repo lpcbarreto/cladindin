@@ -14,6 +14,8 @@ export type PreviewRow = {
   note: string | null;
   installment: { number: number; total: number; key: string } | null;
   cardholder: string | null;
+  /** Empresa achada pelo CNPJ do histórico (atividade define a categoria sugerida). */
+  company: { cnpj: string; name: string; activity: string | null; contactId: string | null } | null;
 };
 
 export type CsvInfo = {
