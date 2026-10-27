@@ -2,11 +2,9 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { z } from "zod";
-import { createClient } from "@/lib/supabase/client";
-import { pwnedCount, weakPasswordReason } from "@/lib/pwned";
+import { pwnedCount } from "@/lib/pwned";
+import { authAction } from "./actions";
 
-const emailSchema = z.string().email("E-mail inválido");
 type Mode = "entrar" | "cadastrar" | "link";
 const LABELS: Record<Mode, string> = { entrar: "Entrar", cadastrar: "Criar conta", link: "Link mágico" };
 
@@ -23,45 +21,18 @@ export function LoginForm({ next }: { next: string }) {
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setMsg(null);
-    const parsed = emailSchema.safeParse(email);
-    if (!parsed.success) return setMsg({ ok: false, text: parsed.error.issues[0].message, id: Date.now() });
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) return setMsg({ ok: false, text: "E-mail inválido", id: Date.now() });
     setLoading(true);
-    const supabase = createClient();
-    const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`;
     try {
-      if (forgot) {
-        const { error } = await supabase.auth.resetPasswordForEmail(email, {
-          redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent("/redefinir-senha")}`,
-        });
-        if (error) throw error;
-        // Mesma resposta exista ou não a conta: não revela quais e-mails estão cadastrados
-        setMsg({ ok: true, text: "Se houver uma conta com esse e-mail, enviamos um link para criar uma nova senha.", id: Date.now() });
-      } else if (mode === "link") {
-        const { error } = await supabase.auth.signInWithOtp({ email, options: { emailRedirectTo: redirectTo } });
-        if (error) throw error;
-        setMsg({ ok: true, text: "Enviamos um link de acesso para o seu e-mail.", id: Date.now() });
-      } else if (mode === "cadastrar") {
-        const weak = weakPasswordReason(password);
-        if (weak) throw new Error(weak);
-        if ((await pwnedCount(password)) > 0) throw new Error("Essa senha já apareceu em vazamentos de dados na internet. Escolha outra, que você não use em nenhum outro site.");
-        const { error, data } = await supabase.auth.signUp({
-          email,
-          password,
-          options: { emailRedirectTo: redirectTo, data: { full_name: name } },
-        });
-        if (error) throw error;
-        if (data.session) {
-          router.replace(next);
-          router.refresh();
-        } else setMsg({ ok: true, text: "Conta criada. Confirme pelo link enviado ao seu e-mail.", id: Date.now() });
-      } else {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) throw new Error("E-mail ou senha incorretos.");
-        const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
-        const needsCode = aal?.nextLevel === "aal2" && aal.currentLevel !== "aal2";
-        router.replace(needsCode ? `/login/mfa?next=${encodeURIComponent(next)}` : next);
+      // A checagem de senha vazada fica no navegador: só 5 caracteres do hash saem dele
+      if (mode === "cadastrar" && !forgot && (await pwnedCount(password)) > 0) throw new Error("Essa senha já apareceu em vazamentos de dados na internet. Escolha outra, que você não use em nenhum outro site.");
+      const r = await authAction({ mode: forgot ? "recuperar" : mode, email, password, name, next });
+      if (r.redirect) {
+        router.replace(r.redirect);
         router.refresh();
+        return;
       }
+      setMsg({ ok: r.ok, text: r.text, id: Date.now() });
     } catch (err) {
       setMsg({ ok: false, text: err instanceof Error ? err.message : "Algo deu errado.", id: Date.now() });
     } finally {

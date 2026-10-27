@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
+import { verifyMfaAction } from "../actions";
 
 export function MfaForm({ next }: { next: string }) {
   const router = useRouter();
@@ -14,17 +14,10 @@ export function MfaForm({ next }: { next: string }) {
     e.preventDefault();
     setMsg(null);
     setLoading(true);
-    const supabase = createClient();
-    const { data: factors } = await supabase.auth.mfa.listFactors();
-    const factor = factors?.totp.find((f) => f.status === "verified");
-    if (!factor) {
-      setLoading(false);
-      return setMsg({ text: "Nenhum autenticador encontrado.", id: Date.now() });
-    }
-    const { error } = await supabase.auth.mfa.challengeAndVerify({ factorId: factor.id, code: code.replace(/\D/g, "") });
+    const r = await verifyMfaAction(code, next);
     setLoading(false);
-    if (error) return setMsg({ text: "Código inválido. Confira o horário do celular e tente de novo.", id: Date.now() });
-    router.replace(next);
+    if (!r.ok && !r.redirect) return setMsg({ text: r.text, id: Date.now() });
+    router.replace(r.redirect ?? next);
     router.refresh();
   }
 

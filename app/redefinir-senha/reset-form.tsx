@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
+import { updatePasswordAction } from "@/app/login/actions";
 import { pwnedCount, weakPasswordReason } from "@/lib/pwned";
 
 export function ResetForm() {
@@ -23,11 +23,11 @@ export function ResetForm() {
       setLoading(false);
       return setMsg({ ok: false, text: "Essa senha já apareceu em vazamentos de dados na internet. Escolha outra, que você não use em nenhum outro site.", id: Date.now() });
     }
-    const { error } = await createClient().auth.updateUser({ password });
+    const r = await updatePasswordAction(password);
     setLoading(false);
-    if (error) return setMsg({ ok: false, text: "Não foi possível trocar a senha. Peça um novo link.", id: Date.now() });
-    setMsg({ ok: true, text: "Senha alterada! Entrando...", id: Date.now() });
-    router.replace("/");
+    setMsg({ ok: r.ok, text: r.text, id: Date.now() });
+    if (!r.ok) return;
+    router.replace(r.redirect ?? "/");
     router.refresh();
   }
 

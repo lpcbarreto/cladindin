@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
+import { mfaConfirm, mfaDisable, mfaEnroll, mfaStatus, signOutEverywhere as signOutAll } from "./security-actions";
 
 type Enrolling = { factorId: string; qr: string; secret: string };
 
@@ -16,8 +16,7 @@ export function SecuritySettings() {
   const [busy, setBusy] = useState(false);
 
   async function refresh() {
-    const { data } = await createClient().auth.mfa.listFactors();
-    setFactorId(data?.totp.find((f) => f.status === "verified")?.id ?? null);
+    setFactorId(await mfaStatus().catch(() => null));
   }
 
   useEffect(() => {
@@ -27,23 +26,19 @@ export function SecuritySettings() {
   async function start() {
     setMsg(null);
     setBusy(true);
-    const supabase = createClient();
-    // Remove tentativas anteriores não concluídas
-    const { data: list } = await supabase.auth.mfa.listFactors();
-    for (const f of list?.all ?? []) if (f.status !== "verified") await supabase.auth.mfa.unenroll({ factorId: f.id });
-    const { data, error } = await supabase.auth.mfa.enroll({ factorType: "totp", friendlyName: `Cladindin ${Date.now()}` });
+    const data = await mfaEnroll().catch(() => null);
     setBusy(false);
-    if (error || !data) return setMsg({ ok: false, text: "Não foi possível iniciar. Tente de novo." });
-    setEnrolling({ factorId: data.id, qr: data.totp.qr_code, secret: data.totp.secret });
+    if (!data) return setMsg({ ok: false, text: "Não foi possível iniciar. Tente de novo." });
+    setEnrolling(data);
   }
 
   async function confirm(e: React.FormEvent) {
     e.preventDefault();
     if (!enrolling) return;
     setBusy(true);
-    const { error } = await createClient().auth.mfa.challengeAndVerify({ factorId: enrolling.factorId, code });
+    const ok = await mfaConfirm(enrolling.factorId, code).catch(() => false);
     setBusy(false);
-    if (error) return setMsg({ ok: false, text: "Código inválido. Tente o próximo que aparecer no app." });
+    if (!ok) return setMsg({ ok: false, text: "Código inválido. Tente o próximo que aparecer no app." });
     setEnrolling(null);
     setCode("");
     setMsg({ ok: true, text: "Verificação em duas etapas ativada. 🔒" });
@@ -54,16 +49,16 @@ export function SecuritySettings() {
   async function disable() {
     if (!factorId || !window.confirm("Desativar a verificação em duas etapas?")) return;
     setBusy(true);
-    const { error } = await createClient().auth.mfa.unenroll({ factorId });
+    const ok = await mfaDisable(factorId).catch(() => false);
     setBusy(false);
-    if (error) return setMsg({ ok: false, text: "Não foi possível desativar." });
+    if (!ok) return setMsg({ ok: false, text: "Não foi possível desativar." });
     setMsg({ ok: true, text: "Verificação em duas etapas desativada." });
     refresh();
   }
 
   async function signOutEverywhere() {
     if (!window.confirm("Sair de todos os dispositivos, inclusive este?")) return;
-    await createClient().auth.signOut({ scope: "global" });
+    await signOutAll().catch(() => undefined);
     router.replace("/login");
   }
 
