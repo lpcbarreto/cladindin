@@ -3,7 +3,7 @@ import { rateLimit } from "@/lib/rate-limit";
 
 /** Recebe erros do navegador e registra nos logs da Vercel (sem dados pessoais ou financeiros). */
 export async function POST(request: NextRequest) {
-  const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "anon";
+  const ip = request.headers.get("x-real-ip") ?? request.headers.get("x-forwarded-for")?.split(",").pop()?.trim() ?? "anon";
   if (!rateLimit(`erros:${ip}`, 20, 60_000)) return new NextResponse(null, { status: 429 });
   try {
     const body = await request.json();

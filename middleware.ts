@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { hardenCookie } from "@/lib/supabase/cookies";
 
 const PUBLIC_PATHS = ["/login", "/auth", "/convite", "/api/cron", "/api/erros", "/manifest.webmanifest", "/pwa-icon", "/sw.js", "/offline.html"];
 
@@ -14,7 +15,7 @@ export async function middleware(request: NextRequest) {
         setAll: (toSet) => {
           toSet.forEach(({ name, value }) => request.cookies.set(name, value));
           response = NextResponse.next({ request });
-          toSet.forEach(({ name, value, options }) => response.cookies.set(name, value, options));
+          toSet.forEach(({ name, value, options }) => response.cookies.set(name, value, hardenCookie(options)));
         },
       },
     },

@@ -13,6 +13,8 @@ export type AuthResult = { ok: boolean; text: string; redirect?: string };
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 async function origin() {
+  const official = process.env.NEXT_PUBLIC_SITE_URL;
+  if (official && !official.includes("localhost")) return official.replace(/\/$/, "");
   const h = await headers();
   const host = h.get("x-forwarded-host") ?? h.get("host") ?? "localhost:3000";
   const proto = h.get("x-forwarded-proto") ?? (host.startsWith("localhost") ? "http" : "https");
@@ -21,7 +23,8 @@ async function origin() {
 
 async function clientIp() {
   const h = await headers();
-  return h.get("x-forwarded-for")?.split(",")[0]?.trim() || "local";
+  // Na Vercel, x-real-ip vem da própria plataforma (o cliente não consegue forjar)
+  return h.get("x-real-ip") || h.get("x-forwarded-for")?.split(",").pop()?.trim() || "local";
 }
 
 export async function authAction(input: {
