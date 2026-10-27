@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 
 type Theme = "light" | "dark" | "system";
 
-const OPTIONS: { value: Theme; label: string; icon: React.ReactNode }[] = [
+const OPTIONS: { value: Theme; label: string; title?: string; icon: React.ReactNode }[] = [
   {
     value: "light",
     label: "Claro",
@@ -16,7 +16,7 @@ const OPTIONS: { value: Theme; label: string; icon: React.ReactNode }[] = [
     ),
   },
   { value: "dark", label: "Escuro", icon: <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" /> },
-  { value: "system", label: "Sistema", icon: <path d="M3 5h18v11H3zM8 20h8M12 16v4" /> },
+  { value: "system", label: "Auto", title: "Seguir o sistema", icon: <path d="M3 5h18v11H3zM8 20h8M12 16v4" /> },
 ];
 
 function readTheme(): Theme {
@@ -69,23 +69,23 @@ export function ThemeToggle({ showLabels = false }: { showLabels?: boolean }) {
   }
 
   return (
-    <div role="radiogroup" aria-label="Tema" className="inline-flex w-full rounded-full border border-border bg-surface-2 p-1">
+    <div role="radiogroup" aria-label="Tema" className="inline-flex w-full gap-0.5 rounded-[10px] border border-border bg-surface-2 p-[3px]">
       {OPTIONS.map((o) => (
         <button
           key={o.value}
           type="button"
           role="radio"
           aria-checked={theme === o.value}
-          title={o.label}
+          title={o.title ?? o.label}
           onClick={() => choose(o.value)}
-          className={`flex flex-1 items-center justify-center gap-1.5 rounded-full px-2 py-1.5 text-xs font-semibold transition ${
-            theme === o.value ? "bg-surface text-foreground shadow-sm" : "text-muted hover:text-foreground"
+          className={`flex min-w-0 flex-1 items-center justify-center gap-1 rounded-lg px-1 py-1.5 text-xs font-medium transition ${
+            theme === o.value ? "bg-surface text-foreground shadow-[0_1px_2px_rgba(17,22,20,0.08)]" : "text-muted hover:text-foreground"
           }`}
         >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" className="shrink-0" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
             {o.icon}
           </svg>
-          <span className={showLabels ? "" : "sr-only"}>{o.label}</span>
+          <span className={showLabels ? "truncate" : "sr-only"}>{o.label}</span>
         </button>
       ))}
     </div>
