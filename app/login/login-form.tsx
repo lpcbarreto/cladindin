@@ -112,7 +112,7 @@ export function LoginForm({ next }: { next: string }) {
           {msg.text}
         </p>
       )}
-      <button className="btn h-11 w-full text-[15px]" disabled={loading}>
+      <button className="group btn h-11 w-full text-[15px]" disabled={loading}>
         {loading ? (
           <>
             <span aria-hidden="true" className="h-4 w-4 animate-spin rounded-full border-2 border-primary-fg/40 border-t-primary-fg" />
@@ -123,7 +123,12 @@ export function LoginForm({ next }: { next: string }) {
         ) : mode === "link" ? (
           "Enviar link"
         ) : (
-          LABELS[mode]
+          <>
+            {LABELS[mode]}
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="transition-transform duration-200 group-hover:translate-x-1">
+              <path d="M5 12h14M13 6l6 6-6 6" />
+            </svg>
+          </>
         )}
       </button>
     </form>
