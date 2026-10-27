@@ -49,7 +49,7 @@ export default async function ProjectionPage({
         </div>
       ) : (
         <div className="card bg-primary-soft text-sm">
-          Tudo certo: o saldo não fica negativo nos próximos {days} dias. 🎉
+          Tudo certo: o saldo não fica negativo nos próximos {days} dias.
         </div>
       )}
 

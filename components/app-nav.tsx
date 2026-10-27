@@ -25,7 +25,7 @@ const ICONS: Record<string, React.ReactNode> = {
 
 export function NavIcon({ name }: { name: string }) {
   return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       {ICONS[name]}
     </svg>
   );
@@ -43,8 +43,8 @@ export function AppNav({ base, items }: { base: string; items: { href: string; l
             key={item.href}
             href={href}
             aria-current={active ? "page" : undefined}
-            className={`flex items-center gap-3 rounded-full px-4 py-2 text-sm font-semibold whitespace-nowrap transition ${
-              active ? "bg-primary text-primary-fg shadow-sm" : "text-muted hover:bg-primary-soft hover:text-foreground"
+            className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm whitespace-nowrap transition-colors ${
+              active ? "bg-primary-soft font-semibold text-foreground shadow-[inset_2px_0_0_var(--brand)]" : "font-medium text-muted hover:bg-surface-2 hover:text-foreground"
             }`}
           >
             <NavIcon name={item.href} />

@@ -40,7 +40,7 @@ export function ResetForm() {
           {msg.text}
         </p>
       )}
-      <button className="btn shine w-full" disabled={loading}>
+      <button className="btn h-11 w-full" disabled={loading}>
         {loading ? "Aguarde..." : "Salvar nova senha"}
       </button>
     </form>

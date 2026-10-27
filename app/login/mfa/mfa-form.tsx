@@ -39,7 +39,7 @@ export function MfaForm({ next }: { next: string }) {
           {msg.text}
         </p>
       )}
-      <button className="btn shine w-full" disabled={loading || code.length !== 6}>
+      <button className="btn h-11 w-full" disabled={loading || code.length !== 6}>
         {loading ? "Verificando..." : "Confirmar"}
       </button>
     </form>

@@ -84,7 +84,7 @@ export default async function ImportHistoryPage({ params }: { params: Promise<{ 
               <tr>
                 <td colSpan={6} className="p-2">
                   <EmptyState
-                    icon="📥"
+                    icon="inbox"
                     title="Nenhuma importação ainda"
                     hint="Baixe o extrato no app do seu banco (OFX, CSV ou PDF) e traga tudo de uma vez, sem duplicar."
                     action={{ href: `/w/${workspaceId}/importar`, label: "Importar agora" }}

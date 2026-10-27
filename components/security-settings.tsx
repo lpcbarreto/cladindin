@@ -41,7 +41,7 @@ export function SecuritySettings() {
     if (!ok) return setMsg({ ok: false, text: "Código inválido. Tente o próximo que aparecer no app." });
     setEnrolling(null);
     setCode("");
-    setMsg({ ok: true, text: "Verificação em duas etapas ativada. 🔒" });
+    setMsg({ ok: true, text: "Verificação em duas etapas ativada." });
     refresh();
     router.refresh();
   }

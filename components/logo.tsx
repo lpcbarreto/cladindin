@@ -1,28 +1,28 @@
-/** Marca Cladindin: moeda sorridente com "c" + nome em minúsculas. */
-export function LogoMark({ size = 32, className = "" }: { size?: number; className?: string }) {
+/** Marca Cladindin: quadrado arredondado verde com o "c" fechando como uma moeda. */
+export function LogoMark({ size = 32, className = "", animate = false }: { size?: number; className?: string; animate?: boolean }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 64 64" aria-hidden="true" className={className}>
-      <circle cx="32" cy="32" r="30" fill="var(--primary)" />
-      <circle cx="32" cy="32" r="24" fill="none" stroke="var(--primary-fg)" strokeOpacity=".25" strokeWidth="2" strokeDasharray="3 5" />
-      {/* "c" formando um sorriso */}
-      <path d="M41 24.5a12 12 0 1 0 0 15" fill="none" stroke="var(--primary-fg)" strokeWidth="6" strokeLinecap="round" />
-      <circle cx="47" cy="17" r="5" fill="var(--accent)" />
+    <svg width={size} height={size} viewBox="0 0 40 40" aria-hidden="true" className={className}>
+      <rect width="40" height="40" rx="11" fill="var(--brand)" />
+      <path
+        d="M26 14.5a8 8 0 1 0 0 11"
+        fill="none"
+        stroke="var(--primary-fg)"
+        strokeWidth="4"
+        strokeLinecap="round"
+        pathLength={1}
+        className={animate ? "draw-line" : undefined}
+      />
+      <circle cx="29" cy="20" r="2.4" fill="var(--primary-fg)" />
     </svg>
   );
 }
 
-export function Logo({ size = 32, className = "" }: { size?: number; className?: string }) {
+export function Logo({ size = 32, className = "", animate = false }: { size?: number; className?: string; animate?: boolean }) {
   return (
-    <span className={`group inline-flex items-center gap-2 ${className}`}>
-      <span className="coin-hover inline-flex">
-        <LogoMark size={size} />
-      </span>
-      <span className="wave font-extrabold tracking-tight" style={{ fontSize: size * 0.62 }} aria-label="cladindin">
-        {"cladindin".split("").map((ch, i) => (
-          <span key={i} aria-hidden="true" className={`inline-block ${i >= 6 ? "text-primary" : ""}`} style={{ animationDelay: `${i * 40}ms` }}>
-            {ch}
-          </span>
-        ))}
+    <span className={`inline-flex items-center gap-2.5 ${className}`}>
+      <LogoMark size={size} animate={animate} />
+      <span className="font-display font-semibold tracking-[-0.03em]" style={{ fontSize: size * 0.66 }}>
+        cladindin
       </span>
     </span>
   );

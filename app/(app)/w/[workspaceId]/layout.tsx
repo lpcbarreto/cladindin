@@ -41,7 +41,7 @@ export default async function WorkspaceLayout({
     <div className="min-h-dvh md:grid md:grid-cols-[260px_1fr]">
       <aside className="flex flex-col gap-5 border-b border-border bg-surface p-4 md:sticky md:top-0 md:h-dvh md:overflow-y-auto md:overscroll-contain md:border-r md:border-b-0 md:p-5">
         <div className="flex items-center justify-between">
-          <Logo size={34} />
+          <Logo size={28} />
           <div className="w-32 md:hidden">
             <ThemeToggle />
           </div>
@@ -50,8 +50,8 @@ export default async function WorkspaceLayout({
         <CommandBar workspaceId={current.id} nav={NAV} />
         <AppNav base={`/w/${current.id}`} items={NAV} />
         <div className="mt-auto hidden space-y-3 md:block">
-          <div className="flex items-center gap-3 rounded-2xl bg-surface-2 p-3">
-            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-accent font-extrabold text-foreground">
+          <div className="flex items-center gap-3 rounded-xl border border-border p-2.5">
+            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-border bg-surface-2 text-sm font-semibold text-foreground">
               {initial}
             </span>
             <span className="min-w-0 truncate text-xs text-muted">{user.email}</span>

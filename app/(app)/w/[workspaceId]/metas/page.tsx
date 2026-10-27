@@ -1,4 +1,5 @@
 import { loadWorkspaceContext, hasRole } from "@/lib/workspace";
+import { Icon } from "@/components/icon";
 import { formatBRL } from "@/lib/finance/money";
 import { formatDateBR, todayISO } from "@/lib/finance/dates";
 import { goalPlan } from "@/lib/finance/goals";
@@ -51,9 +52,9 @@ export default async function GoalsPage({ params }: { params: Promise<{ workspac
 
       {goals.length === 0 && !error ? (
         <div className="card space-y-2 py-10 text-center">
-          <p className="text-4xl" aria-hidden="true">
-            🎯
-          </p>
+          <span className="mx-auto grid h-11 w-11 place-items-center rounded-xl border border-border bg-surface-2 text-muted">
+            <Icon name="target" size={20} />
+          </span>
           <p className="font-bold">Nenhuma meta ainda</p>
           <p className="text-sm text-muted">Que tal começar com uma reserva de emergência de 6 meses de gastos?</p>
         </div>
@@ -66,7 +67,6 @@ export default async function GoalsPage({ params }: { params: Promise<{ workspac
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <h2 className="text-lg font-extrabold">
-                      {g.emoji && <span className="mr-1">{g.emoji}</span>}
                       {g.name}
                     </h2>
                     <p className="text-sm text-muted">
@@ -81,7 +81,7 @@ export default async function GoalsPage({ params }: { params: Promise<{ workspac
                 </div>
                 <p className="text-sm">
                   {plan.done ? (
-                    <b className="text-primary">Meta alcançada! 🎉</b>
+                    <b className="inline-flex items-center gap-1.5 text-primary"><Icon name="checkCircle" size={16} />Meta alcançada</b>
                   ) : plan.late ? (
                     <span className="text-danger">
                       Prazo passou — faltam <b>{formatBRL(plan.remaining)}</b>.

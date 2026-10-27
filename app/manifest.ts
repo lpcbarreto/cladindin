@@ -7,8 +7,8 @@ export default function manifest(): MetadataRoute.Manifest {
     description: "Gestão financeira pessoal e empresarial",
     start_url: "/",
     display: "standalone",
-    background_color: "#f5f7f2",
-    theme_color: "#177a4c",
+    background_color: "#fafaf9",
+    theme_color: "#0f9d6e",
     lang: "pt-BR",
     icons: [
       { src: "/pwa-icon/192", sizes: "192x192", type: "image/png" },

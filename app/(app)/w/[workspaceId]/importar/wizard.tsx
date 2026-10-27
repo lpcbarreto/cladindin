@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { Icon } from "@/components/icon";
 import { useMemo, useRef, useState, useTransition } from "react";
 import type { CategoryOption, Option } from "@/lib/transactions";
 import type { CsvMapping } from "@/lib/importers/csv/parse";
@@ -350,7 +351,8 @@ export function ImportWizard({
                     </p>
                     {receipt && (
                       <p className={receipt.ok ? "text-primary" : "text-danger"}>
-                        📎 {receipt.message}{" "}
+                        <Icon name="paperclip" size={14} className="mr-1 align-[-2px]" />
+                        {receipt.message}{" "}
                         {receipt.txId && (
                           <Link href={`/w/${workspaceId}/lancamentos/${receipt.txId}`} className="underline">
                             Ver lançamento
@@ -574,7 +576,8 @@ function StatementReview({
         </p>
         {s.receipt && (
           <p className="rounded-xl bg-primary-soft px-3 py-2 text-xs">
-            📎 O PDF será anexado ao lançamento
+            <Icon name="paperclip" size={14} className="mr-1 align-[-2px]" />
+            O PDF será anexado ao lançamento
             {s.rows?.[0] && "txId" in s.rows[0].status && s.rows[0].status.kind !== "reconcile"
               ? " que já existe (desmarque para não criar outro igual)."
               : ". Confira a descrição e a categoria."}
@@ -587,7 +590,8 @@ function StatementReview({
         )}
         {warnings.map((w) => (
           <p key={w} className="text-xs text-muted">
-            ⚠ {w}
+            <Icon name="alert" size={13} className="mr-1 align-[-2px]" />
+            {w}
           </p>
         ))}
       </header>
@@ -632,7 +636,8 @@ function StatementReview({
                       {r.cardholder && <span className="rounded-full bg-surface-2 px-2 py-0.5 text-muted">{r.cardholder}</span>}
                       {r.company && (
                         <span className="rounded-full bg-accent-soft px-2 py-0.5 text-foreground" title={r.company.activity ?? undefined}>
-                          🏢 {r.company.name}
+                          <Icon name="building" size={13} className="mr-1 align-[-2px]" />
+                          {r.company.name}
                           {r.company.activity && <span className="text-muted"> · {r.company.activity}</span>}
                         </span>
                       )}

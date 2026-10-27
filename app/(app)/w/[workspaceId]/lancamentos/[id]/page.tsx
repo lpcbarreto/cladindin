@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Icon } from "@/components/icon";
 import { notFound } from "next/navigation";
 import { loadWorkspaceContext, hasRole } from "@/lib/workspace";
 import { loadOptions } from "@/lib/transactions";
@@ -100,11 +101,11 @@ export default async function EditTransactionPage({ params }: { params: Promise<
                   </a>
                 ) : a.url && a.mime_type === "application/pdf" ? (
                   <object data={`${a.url}#toolbar=0&view=FitH`} type="application/pdf" className="pointer-events-none h-40 w-full rounded-xl bg-surface-2" aria-label={`Prévia de ${a.file_name}`}>
-                    <div className="grid h-40 place-items-center rounded-xl bg-surface-2 text-3xl">📄</div>
+                    <div className="grid h-40 place-items-center rounded-xl bg-surface-2 text-muted"><Icon name="file" size={28} /></div>
                   </object>
                 ) : (
-                  <div className="grid h-40 place-items-center rounded-xl bg-surface-2 text-3xl" aria-hidden="true">
-                    📎
+                  <div className="grid h-40 place-items-center rounded-xl bg-surface-2 text-muted">
+                    <Icon name="paperclip" size={28} />
                   </div>
                 )}
                 <div className="flex items-center justify-between gap-2">

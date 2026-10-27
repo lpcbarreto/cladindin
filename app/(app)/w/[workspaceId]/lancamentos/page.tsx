@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Icon } from "@/components/icon";
 import { SelectionBar } from "@/components/selection-bar";
 import { EmptyState } from "@/components/empty-state";
 import { loadWorkspaceContext, hasRole } from "@/lib/workspace";
@@ -181,8 +182,8 @@ export default async function TransactionsPage({
                         r.description
                       )}
                       {(r.attachments?.[0]?.count ?? 0) > 0 && (
-                        <span className="ml-1 text-xs" title="Tem comprovante" aria-label="Tem comprovante">
-                          📎
+                        <span className="ml-1 inline-flex align-middle text-muted" title="Tem comprovante">
+                          <Icon name="paperclip" size={14} label="Tem comprovante" />
                         </span>
                       )}
                       {r.contact && <span className="block text-xs text-muted">{r.contact.name}</span>}
@@ -200,7 +201,7 @@ export default async function TransactionsPage({
                 <tr>
                   <td colSpan={7} className="p-2">
                     <EmptyState
-                      icon="🧾"
+                      icon="receipt"
                       title="Nenhum lançamento neste período"
                       hint={<>Aperte <kbd className="rounded bg-surface-2 px-1">N</kbd> para um lançamento rápido ou importe o extrato do banco.</>}
                       action={{ href: `/w/${workspaceId}/importar`, label: "Importar extrato" }}

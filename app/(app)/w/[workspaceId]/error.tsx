@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { Icon } from "@/components/icon";
 import { useEffect } from "react";
 import { reportError } from "@/lib/report-error";
 
@@ -13,9 +14,9 @@ export default function WorkspaceError({ error, reset }: { error: Error & { dige
 
   return (
     <div className="card mx-auto max-w-lg space-y-4 text-center">
-      <p className="text-4xl" aria-hidden="true">
-        🪙
-      </p>
+      <span className="mx-auto grid h-11 w-11 place-items-center rounded-xl border border-border bg-surface-2 text-muted">
+        <Icon name="alert" size={20} />
+      </span>
       <h1 className="text-xl font-extrabold">Ops, algo não carregou</h1>
       <p className="text-sm text-muted">
         Pode ter sido uma instabilidade de conexão. Tente de novo; se continuar, recarregue a página ou volte ao início.

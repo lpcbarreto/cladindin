@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Icon } from "@/components/icon";
 import { loadWorkspaceContext } from "@/lib/workspace";
 import { formatBRL } from "@/lib/finance/money";
 import { formatDateBR, formatMonthBR, shiftMonth, todayISO } from "@/lib/finance/dates";
@@ -108,7 +109,8 @@ export default async function ReportsPage({
         </div>
         <div className="no-print flex flex-wrap gap-2">
           <Link href={`${base}/imposto`} className="btn-ghost">
-            🧾 Imposto de Renda
+            <Icon name="receipt" size={16} />
+            Imposto de Renda
           </Link>
           <a href={`${base}/exportar?${qs({})}`} className="btn-ghost">
             Exportar CSV
@@ -367,7 +369,7 @@ function Empty({ base }: { base: string }) {
   return (
     <div className="card">
       <EmptyState
-        icon="📊"
+        icon="chart"
         title="Sem lançamentos neste período"
         hint="Escolha outro período acima ou importe um extrato para os relatórios ganharem vida."
         action={{ href: `/w/${base}/importar`, label: "Importar extrato" }}

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Icon } from "@/components/icon";
 import { loadWorkspaceContext } from "@/lib/workspace";
 import { formatBRL } from "@/lib/finance/money";
 import { addDays, formatDateBR, formatMonthBR, monthRange, shiftMonth, todayISO } from "@/lib/finance/dates";
@@ -139,7 +140,7 @@ export default async function DashboardPage({
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <p className="text-sm font-semibold text-muted">{current.name}</p>
-          <h1 className="text-3xl font-extrabold tracking-tight">Olá! Veja como está o seu dindin 👋</h1>
+          <h1 className="text-3xl font-extrabold tracking-tight">Visão geral</h1>
         </div>
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-1 rounded-full bg-surface-2 p-1 text-sm font-semibold">
@@ -197,20 +198,14 @@ export default async function DashboardPage({
       )}
 
       <div data-section="kpis" className="stagger grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {kpis.map((k, i) =>
-          i === 0 ? (
-            <div key={k.label} className="relative overflow-hidden rounded-[1.25rem] bg-primary p-5 text-primary-fg shadow-sm">
-              <p className="text-sm font-semibold opacity-80">{k.label}</p>
-              <p className="mt-1 text-2xl font-extrabold tabular-nums"><CountUp cents={k.value} /></p>
-              <div aria-hidden="true" className="absolute -right-8 -bottom-10 h-28 w-28 rounded-full border-[14px] border-primary-fg/10" />
-            </div>
-          ) : (
-            <div key={k.label} className="card">
-              <p className="text-sm font-semibold text-muted">{k.label}</p>
-              <p className={`mt-1 text-2xl font-extrabold tabular-nums ${k.tone}`}><CountUp cents={k.value} /></p>
-            </div>
-          ),
-        )}
+        {kpis.map((k) => (
+          <div key={k.label} className="card lift">
+            <p className="text-sm text-muted">{k.label}</p>
+            <p className={`mt-1 text-[26px] font-semibold tabular-nums ${k.tone}`}>
+              <CountUp cents={k.value} />
+            </p>
+          </div>
+        ))}
       </div>
 
       <div className="stagger grid gap-4 lg:grid-cols-3">
@@ -272,9 +267,9 @@ export default async function DashboardPage({
           <h2 className="font-medium">Maiores despesas do mês</h2>
           {top.length === 0 ? (
             <div className="py-4 text-center text-sm text-muted">
-              <p className="text-2xl" aria-hidden="true">
-                🌱
-              </p>
+              <span className="mx-auto mb-1 grid h-10 w-10 place-items-center rounded-xl border border-border bg-surface-2">
+                <Icon name="sprout" size={18} />
+              </span>
               <p>Sem despesas neste mês.</p>
               <p className="text-xs">
                 Aperte <kbd className="rounded bg-surface-2 px-1">N</kbd> para lançar a primeira.
@@ -313,7 +308,10 @@ export default async function DashboardPage({
               return (
                 <li key={b.categoryId} className={`rounded-2xl p-3 text-sm ${over ? "bg-danger-soft" : "bg-accent-soft"}`}>
                   <p className="font-semibold">
-                    {over ? "⚠ Estourado" : "● Atenção"} · {b.name}
+                    <span className="inline-flex items-center gap-1.5">
+                      <Icon name="alert" size={14} className={over ? "text-danger" : "text-muted"} />
+                      {over ? "Estourado" : "Atenção"} · {b.name}
+                    </span>
                   </p>
                   <p className="text-muted">
                     {formatBRL(used)} de {formatBRL(b.budget ?? 0)} ({Math.round((used / (b.budget ?? 1)) * 100)}%)

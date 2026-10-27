@@ -42,15 +42,15 @@ export function LoginForm({ next }: { next: string }) {
 
   return (
     <form onSubmit={onSubmit} className="space-y-3">
-      <div className="relative mb-2 flex rounded-full bg-surface-2 p-1 text-sm font-semibold">
+      <div className="relative mb-2 flex rounded-[10px] bg-surface-2 p-[3px] text-[13px] font-medium">
         {/* Pílula que desliza até a aba escolhida */}
         <span
           aria-hidden="true"
-          className="absolute inset-y-1 left-1 rounded-full bg-surface shadow-sm transition-transform duration-300"
+          className="absolute inset-y-[3px] left-[3px] rounded-lg bg-surface shadow-[0_1px_2px_rgba(17,22,20,0.08)] transition-transform duration-300"
           style={{
-            width: "calc((100% - 0.5rem) / 3)",
+            width: "calc((100% - 6px) / 3)",
             transform: `translateX(${(Object.keys(LABELS) as Mode[]).indexOf(mode) * 100}%)`,
-            transitionTimingFunction: "var(--ease-spring)",
+            transitionTimingFunction: "var(--ease-out)",
           }}
         />
         {(Object.keys(LABELS) as Mode[]).map((m) => (
@@ -63,7 +63,7 @@ export function LoginForm({ next }: { next: string }) {
               setMsg(null);
             }}
             aria-pressed={mode === m}
-            className={`relative z-10 flex-1 rounded-full px-2 py-1.5 transition-colors ${mode === m ? "text-foreground" : "text-muted hover:text-foreground"}`}
+            className={`relative z-10 flex-1 rounded-lg px-2 py-1.5 transition-colors ${mode === m ? "text-foreground" : "text-muted hover:text-foreground"}`}
           >
             {LABELS[m]}
           </button>
@@ -100,7 +100,7 @@ export function LoginForm({ next }: { next: string }) {
               setForgot((f) => !f);
               setMsg(null);
             }}
-            className="text-xs font-semibold text-primary hover:underline"
+            className="text-xs font-medium text-primary hover:underline"
           >
             {forgot ? "Voltar para o login" : "Esqueci minha senha"}
           </button>
@@ -112,7 +112,7 @@ export function LoginForm({ next }: { next: string }) {
           {msg.text}
         </p>
       )}
-      <button className="btn shine w-full" disabled={loading}>
+      <button className="btn h-11 w-full text-[15px]" disabled={loading}>
         {loading ? (
           <>
             <span aria-hidden="true" className="h-4 w-4 animate-spin rounded-full border-2 border-primary-fg/40 border-t-primary-fg" />

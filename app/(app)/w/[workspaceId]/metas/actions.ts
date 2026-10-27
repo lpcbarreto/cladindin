@@ -64,7 +64,7 @@ export async function addContribution(_prev: FormState, form: FormData): Promise
   });
   if (error) return { ok: false, message: dbErrorMessage(error) };
   revalidatePath(`/w/${v.workspaceId}/metas`);
-  return { ok: true, message: v.kind === "in" ? "Guardado! 💰" : "Retirada registrada." };
+  return { ok: true, message: v.kind === "in" ? "Guardado!" : "Retirada registrada." };
 }
 
 const idSchema = z.object({ workspaceId: uuid, id: uuid, op: z.enum(["archive", "unarchive", "delete"]) });

@@ -19,12 +19,8 @@ export function GoalForm({ workspaceId }: { workspaceId: string }) {
     if (state?.ok) ref.current?.reset();
   }, [state]);
   return (
-    <form ref={ref} action={action} className="grid gap-3 sm:grid-cols-[4rem_1fr_10rem_11rem_auto] sm:items-end">
+    <form ref={ref} action={action} className="grid gap-3 sm:grid-cols-[1fr_10rem_11rem_auto] sm:items-end">
       <input type="hidden" name="workspaceId" value={workspaceId} />
-      <label className="text-sm">
-        <span className="text-muted">Ícone</span>
-        <input name="emoji" className="input text-center" placeholder="✈️" maxLength={8} />
-      </label>
       <label className="text-sm">
         <span className="text-muted">Nome</span>
         <input name="name" className="input" placeholder="Viagem de férias" required />
@@ -40,7 +36,7 @@ export function GoalForm({ workspaceId }: { workspaceId: string }) {
       <button className="btn" disabled={pending}>
         Criar meta
       </button>
-      <div className="sm:col-span-5">
+      <div className="sm:col-span-4">
         <Msg state={state} />
       </div>
     </form>

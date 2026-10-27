@@ -212,7 +212,7 @@ export default async function PayablesPage({
           );
         })}
         {rows.length === 0 && (invoices ?? []).length === 0 && (
-          <div className="card text-center text-sm text-muted">Nada a {mode} no período. 🎉</div>
+          <div className="card text-center text-sm text-muted">Nada a {mode} no período.</div>
         )}
       </div>
 

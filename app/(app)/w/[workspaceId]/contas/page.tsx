@@ -131,7 +131,7 @@ export default async function AccountsPage({
               <tr>
                 <td colSpan={5} className="p-2">
                   <EmptyState
-                    icon="🏦"
+                    icon="bank"
                     title="Nenhuma conta ainda"
                     hint="Cadastre sua conta corrente, poupança, carteira ou cartão de crédito no formulário acima."
                   />

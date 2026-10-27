@@ -9,7 +9,7 @@ export const metadata: Metadata = {
   appleWebApp: { capable: true, title: "Cladindin", statusBarStyle: "default" },
 };
 
-export const viewport: Viewport = { themeColor: "#177a4c" };
+export const viewport: Viewport = { themeColor: "#0f9d6e" };
 
 // Aplica o tema antes da pintura para evitar flash
 const themeScript = `try{var t=localStorage.getItem('tema');if(t==='dark'||(!t&&matchMedia('(prefers-color-scheme: dark)').matches))document.documentElement.classList.add('dark')}catch(e){}`;

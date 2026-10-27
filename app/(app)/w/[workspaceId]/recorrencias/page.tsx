@@ -181,7 +181,7 @@ export default async function RecurrencesPage({
         })}
         {rules.length === 0 && (
           <div className="card">
-            <EmptyState icon="🔁" title="Nenhuma recorrência ainda" hint="Cadastre aluguel, luz, internet e salário uma vez só: o Cladindin cria os próximos meses sozinho." />
+            <EmptyState icon="repeat" title="Nenhuma recorrência ainda" hint="Cadastre aluguel, luz, internet e salário uma vez só: o Cladindin cria os próximos meses sozinho." />
           </div>
         )}
       </div>
