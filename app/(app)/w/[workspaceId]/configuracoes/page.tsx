@@ -3,6 +3,8 @@ import { changeRole, removeMember, revokeInvite } from "./actions";
 import { DeleteWorkspaceForm, DemoDataForm, InviteForm, NewWorkspaceForm, NotificationPrefsForm } from "./forms";
 import { SecuritySettings } from "@/components/security-settings";
 import { ThemeToggle } from "@/components/theme-toggle";
+import Link from "next/link";
+import { DeleteAccountForm, ProfileNameForm } from "./account-forms";
 
 export default async function SettingsPage({ params }: { params: Promise<{ workspaceId: string }> }) {
   const { workspaceId } = await params;
@@ -24,7 +26,10 @@ export default async function SettingsPage({ params }: { params: Promise<{ works
         .gt("expires_at", new Date().toISOString())
     : { data: [] };
 
-  const { data: prefs } = await supabase.from("notification_prefs").select("due_alerts, weekly_summary, days_before").eq("user_id", user.id).maybeSingle();
+  const [{ data: prefs }, { data: profile }] = await Promise.all([
+    supabase.from("notification_prefs").select("due_alerts, weekly_summary, days_before").eq("user_id", user.id).maybeSingle(),
+    supabase.from("profiles").select("full_name").eq("id", user.id).maybeSingle(),
+  ]);
 
   return (
     <div className="space-y-8">
@@ -123,12 +128,25 @@ export default async function SettingsPage({ params }: { params: Promise<{ works
       <section className="card space-y-3">
         <h2 className="font-medium">Seus dados (LGPD)</h2>
         <p className="text-sm text-muted">
-          Os dados ficam só no banco deste sistema. Você pode baixar uma cópia completa de “{current.name}” em JSON (contas, lançamentos,
-          regras, orçamentos etc.).
+          Baixe uma cópia dos seus dados, corrija seu nome ou exclua sua conta. Saiba mais na{" "}
+          <Link href="/privacidade" className="underline">
+            Política de Privacidade
+          </Link>{" "}
+          e em{" "}
+          <Link href="/lgpd" className="underline">
+            Seus direitos
+          </Link>
+          .
         </p>
-        <a href={`/w/${workspaceId}/configuracoes/exportar`} className="btn-ghost">
-          Baixar meus dados (JSON)
-        </a>
+        <ProfileNameForm name={profile?.full_name ?? null} />
+        <div className="flex flex-wrap gap-2">
+          <a href={`/w/${workspaceId}/configuracoes/minha-conta`} className="btn-ghost">
+            Baixar dados da minha conta (JSON)
+          </a>
+          <a href={`/w/${workspaceId}/configuracoes/exportar`} className="btn-ghost">
+            Baixar dados de “{current.name}” (JSON)
+          </a>
+        </div>
         {current.role === "owner" && (
           <div className="space-y-2 border-t border-border pt-4">
             <h3 className="font-semibold text-danger">Excluir workspace</h3>
@@ -139,6 +157,14 @@ export default async function SettingsPage({ params }: { params: Promise<{ works
             <DeleteWorkspaceForm workspaceId={workspaceId} name={current.name} />
           </div>
         )}
+        <div className="space-y-2 border-t border-border pt-4">
+          <h3 className="font-semibold text-danger">Excluir minha conta</h3>
+          <p className="text-sm text-muted">
+            Apaga sua conta de acesso e todos os workspaces em que só você está, com lançamentos e comprovantes. Nos workspaces compartilhados, o que
+            você registrou continua lá para os outros membros, sem o seu nome. Não dá para desfazer: baixe seus dados antes.
+          </p>
+          <DeleteAccountForm email={user.email ?? ""} />
+        </div>
       </section>
     </div>
   );

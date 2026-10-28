@@ -88,3 +88,14 @@ As fixtures em `fixtures/` são **sintéticas**: nomes e valores fictícios, sem
 - Envio automático do e-mail de convite (hoje o link é copiado na tela)
 - Open Finance como novo "provedor" de extratos (a interface dos importadores já comporta)
 - Edição inline e virtualização da tabela de lançamentos para volumes muito grandes
+
+## Conformidade legal (LGPD, CDC, Marco Civil, acessibilidade)
+
+Antes de abrir o site ao público, preencha os campos entre colchetes em **`lib/legal.ts`** (razão social, CNPJ, endereço, contatos, Encarregado e foro). Enquanto houver campo vazio, as páginas legais mostram um aviso. Ao mudar o texto dos Termos ou da Política, atualize `versao`: quem já tem conta verá o pedido de novo aceite.
+
+- Páginas públicas: `/termos`, `/privacidade`, `/cookies`, `/reembolso`, `/lgpd` (formulário de pedidos do titular, gravado em `privacy_requests`), `/acessibilidade`.
+- Aceite dos termos no cadastro (versão e data em `user_metadata`); exportação dos dados da conta e de cada workspace; exclusão da conta em Configurações.
+- Registros de acesso (data/hora/IP) por 6 meses em `access_log` (Marco Civil, art. 15), apagados pelo job diário.
+- Só cookies essenciais; nenhum script de rastreamento. Se um dia incluir analytics, peça consentimento antes de carregar.
+- Auditoria automática de acessibilidade (axe, WCAG 2.1 AA) em `tests/e2e/acessibilidade.spec.ts`.
+- Pedidos LGPD são lidos e respondidos pelo painel do Supabase (tabela `privacy_requests`) em até 15 dias.

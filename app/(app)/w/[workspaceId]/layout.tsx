@@ -6,6 +6,9 @@ import { Logo } from "@/components/logo";
 import { CommandBar } from "@/components/command-bar";
 import { UndoToast } from "@/components/undo-toast";
 import { readUndo } from "./global-actions";
+import { TermsBanner } from "@/components/terms-banner";
+import { LegalFooter } from "@/components/legal-footer";
+import { TERMS_VERSION } from "@/lib/legal";
 
 const NAV = [
   { href: "dashboard", label: "Início" },
@@ -39,6 +42,9 @@ export default async function WorkspaceLayout({
 
   return (
     <div className="min-h-dvh md:grid md:grid-cols-[260px_1fr]">
+      <a href="#conteudo" className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[70] focus:rounded-lg focus:bg-surface focus:px-3 focus:py-2 focus:text-sm focus:shadow">
+        Pular para o conteúdo
+      </a>
       <aside className="flex flex-col gap-5 border-b border-border bg-surface p-4 md:sticky md:top-0 md:h-dvh md:overflow-y-auto md:overscroll-contain md:border-r md:border-b-0 md:p-5">
         <div className="flex items-center justify-between">
           <Logo size={28} />
@@ -62,7 +68,13 @@ export default async function WorkspaceLayout({
           </form>
         </div>
       </aside>
-      <main className="mx-auto w-full max-w-6xl p-4 pb-24 md:p-8 md:pb-24">{children}</main>
+      <main id="conteudo" tabIndex={-1} className="mx-auto w-full max-w-6xl p-4 pb-24 outline-none md:p-8 md:pb-24">
+        {user.termsVersion !== TERMS_VERSION && <TermsBanner firstTime={!user.termsVersion} />}
+        {children}
+        <div className="mt-16">
+          <LegalFooter compact />
+        </div>
+      </main>
       {undo?.ws === current.id && <UndoToast key={undo.ids.join()} count={undo.ids.length} />}
     </div>
   );

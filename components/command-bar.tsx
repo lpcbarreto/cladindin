@@ -39,7 +39,13 @@ export function CommandBar({
   useEffect(() => setMounted(true), []);
   const base = `/w/${workspaceId}`;
 
+  // Acessibilidade: ao fechar, o foco volta para onde estava (botão, campo…)
+  const returnFocus = useRef<HTMLElement | null>(null);
+
   function open(m: Mode) {
+    if (document.activeElement instanceof HTMLElement && !document.activeElement.closest("[role=dialog]")) {
+      returnFocus.current = document.activeElement;
+    }
     setMode(m);
     setText("");
     setHits([]);
@@ -79,8 +85,11 @@ export function CommandBar({
   }, []);
 
   useEffect(() => {
-    if (mode !== "closed")
-      requestAnimationFrame(() => inputRef.current?.focus());
+    if (mode !== "closed") requestAnimationFrame(() => inputRef.current?.focus());
+    else if (returnFocus.current?.isConnected) {
+      returnFocus.current.focus();
+      returnFocus.current = null;
+    }
   }, [mode]);
 
   // Busca com pequeno atraso para não consultar a cada tecla
@@ -183,6 +192,21 @@ export function CommandBar({
               aria-label={mode === "add" ? "Lançamento rápido" : "Buscar"}
               className="msg-in w-full max-w-lg rounded-[1.25rem] border border-border bg-surface p-3 shadow-2xl"
               onMouseDown={(e) => e.stopPropagation()}
+              onKeyDown={(e) => {
+                // Mantém o Tab dentro da janela enquanto ela está aberta
+                if (e.key !== "Tab") return;
+                const f = [...e.currentTarget.querySelectorAll<HTMLElement>("input, select, textarea, button:not([disabled]), a[href]")];
+                if (!f.length) return;
+                const first = f[0];
+                const last = f[f.length - 1];
+                if (e.shiftKey && document.activeElement === first) {
+                  e.preventDefault();
+                  last.focus();
+                } else if (!e.shiftKey && document.activeElement === last) {
+                  e.preventDefault();
+                  first.focus();
+                }
+              }}
             >
               {mode === "add" ? (
                 <form onSubmit={submitAdd} className="space-y-2">

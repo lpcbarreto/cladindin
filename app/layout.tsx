@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { ServiceWorkerRegister } from "@/components/sw-register";
 import { ErrorReporter } from "@/components/error-reporter";
+import { CookieNotice } from "@/components/cookie-notice";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -24,6 +25,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         {children}
         <ServiceWorkerRegister />
         <ErrorReporter />
+        <CookieNotice />
       </body>
     </html>
   );

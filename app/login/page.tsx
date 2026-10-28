@@ -5,13 +5,14 @@ import { Logo } from "@/components/logo";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { LoginForm } from "./login-form";
 import { LoginHero } from "./login-hero";
+import { LegalFooter } from "@/components/legal-footer";
 
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ next?: string; erro?: string }>;
+  searchParams: Promise<{ next?: string; erro?: string; excluida?: string }>;
 }) {
-  const { next, erro } = await searchParams;
+  const { next, erro, excluida } = await searchParams;
   const safeNext = toSafeNext(next);
   const supabase = await createClient();
   const { data: session } = await supabase.auth.getClaims();
@@ -36,9 +37,14 @@ export default async function LoginPage({
             <h2 className="text-[26px] font-semibold">Entrar</h2>
             <p className="text-sm text-muted">Bem-vindo de volta.</p>
           </div>
+          {excluida && (
+            <p role="status" className="rounded-[10px] border border-border bg-surface-2 p-3 text-sm">
+              Sua conta e seus dados foram excluídos.
+            </p>
+          )}
           {erro && <p className="shake rounded-[10px] bg-danger-soft p-3 text-sm text-danger">{erro}</p>}
           <LoginForm next={safeNext} />
-          <p className="text-center text-xs text-muted">Seus dados ficam protegidos e separados por workspace.</p>
+          <LegalFooter compact />
         </div>
       </section>
     </main>

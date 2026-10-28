@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { pwnedCount } from "@/lib/pwned";
 import { authAction } from "./actions";
@@ -14,6 +15,7 @@ export function LoginForm({ next }: { next: string }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
+  const [accept, setAccept] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string; id: number } | null>(null);
   const [loading, setLoading] = useState(false);
   const [forgot, setForgot] = useState(false);
@@ -26,7 +28,8 @@ export function LoginForm({ next }: { next: string }) {
     try {
       // A checagem de senha vazada fica no navegador: só 5 caracteres do hash saem dele
       if (mode === "cadastrar" && !forgot && (await pwnedCount(password)) > 0) throw new Error("Essa senha já apareceu em vazamentos de dados na internet. Escolha outra, que você não use em nenhum outro site.");
-      const r = await authAction({ mode: forgot ? "recuperar" : mode, email, password, name, next });
+      if (mode === "cadastrar" && !forgot && !accept) throw new Error("Para criar a conta, aceite os Termos de Serviço e a Política de Privacidade.");
+      const r = await authAction({ mode: forgot ? "recuperar" : mode, email, password, name, next, acceptTerms: accept });
       if (r.redirect) {
         router.replace(r.redirect);
         router.refresh();
@@ -70,7 +73,10 @@ export function LoginForm({ next }: { next: string }) {
         ))}
       </div>
       {mode === "cadastrar" && (
-        <input className="input msg-in" placeholder="Seu nome" value={name} onChange={(e) => setName(e.target.value)} />
+        <label className="msg-in block text-sm">
+          <span className="sr-only">Como prefere ser chamado (opcional)</span>
+          <input className="input" placeholder="Como prefere ser chamado (opcional)" autoComplete="nickname" value={name} onChange={(e) => setName(e.target.value)} />
+        </label>
       )}
       <input
         className="input"
@@ -105,6 +111,22 @@ export function LoginForm({ next }: { next: string }) {
             {forgot ? "Voltar para o login" : "Esqueci minha senha"}
           </button>
         </div>
+      )}
+      {mode === "cadastrar" && !forgot && (
+        <label className="msg-in flex items-start gap-2 text-xs leading-relaxed text-muted">
+          <input type="checkbox" required checked={accept} onChange={(e) => setAccept(e.target.checked)} className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--primary)]" />
+          <span>
+            Li e aceito os{" "}
+            <Link href="/termos" target="_blank" className="font-medium text-primary underline-offset-2 hover:underline">
+              Termos de Serviço
+            </Link>{" "}
+            e a{" "}
+            <Link href="/privacidade" target="_blank" className="font-medium text-primary underline-offset-2 hover:underline">
+              Política de Privacidade
+            </Link>
+            . Tenho 18 anos ou mais.
+          </span>
+        </label>
       )}
       {msg && (
         // key muda a cada mensagem: erros repetidos tremem de novo

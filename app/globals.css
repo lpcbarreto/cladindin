@@ -17,13 +17,13 @@
   /* verde de ação (texto branco com contraste AA) e o da marca */
   --primary: #0b7f57;
   --primary-strong: #08603f;
-  --primary-soft: #e9f4ee;
+  --primary-soft: #f0f8f4;
   --primary-fg: #ffffff;
   --brand: #0f9d6e;
   --accent: #e9ecea;
   --accent-soft: #f1f3f1;
   --danger: #c2412d;
-  --danger-soft: #fbece8;
+  --danger-soft: #fdf2ef;
   --ring: #0f9d6e;
   /* Séries de gráfico (validadas para daltonismo; ver dataviz) */
   --series-income: #0f9d6e;
@@ -118,7 +118,7 @@ h1 {
 }
 
 @utility input {
-  @apply w-full rounded-[10px] border border-border bg-surface px-3 py-2 text-sm transition outline-none placeholder:text-muted/70 focus:border-brand focus:ring-[3px] focus:ring-brand/15;
+  @apply w-full rounded-[10px] border border-border bg-surface px-3 py-2 text-sm transition outline-none placeholder:text-muted focus:border-brand focus:ring-[3px] focus:ring-brand/15;
 }
 @utility btn {
   @apply inline-flex items-center justify-center gap-2 rounded-[10px] bg-primary px-4 py-2 text-sm font-semibold text-primary-fg transition hover:bg-primary-strong active:scale-[0.97] disabled:opacity-50 disabled:active:scale-100;
@@ -321,6 +321,47 @@ form :is(p, span).text-danger {
   animation: pop-in 200ms var(--ease-out) both;
 }
 
+
+/* ---------- Páginas legais ---------- */
+.legal h1 {
+  font-size: 2rem;
+  line-height: 1.15;
+}
+.legal h2 {
+  margin-top: 2rem;
+  font-size: 1.15rem;
+  font-weight: 600;
+}
+.legal ul {
+  list-style: disc;
+  padding-left: 1.25rem;
+}
+.legal li + li {
+  margin-top: 0.35rem;
+}
+.legal a {
+  color: var(--primary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.legal table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+  display: block;
+  overflow-x: auto;
+}
+.legal th,
+.legal td {
+  border-bottom: 1px solid var(--border);
+  padding: 0.6rem 0.75rem 0.6rem 0;
+  text-align: left;
+  vertical-align: top;
+}
+.legal th {
+  color: var(--muted);
+  font-weight: 600;
+}
 
 /* ---------- Login ---------- */
 @keyframes word-cycle {

@@ -24,10 +24,11 @@ export function LoginHero() {
       <div className="relative space-y-8">
         <h1 className="max-w-[480px] font-display text-[clamp(34px,3.2vw,46px)] leading-[1.08] font-semibold tracking-[-0.035em]" style={{ animation: "fade-up 600ms var(--ease-out) 100ms both" }}>
           Suas finanças, num só lugar.
-          <span className="mt-1 block h-[1.08em] overflow-hidden text-[#2bc48a]" aria-label="Sem planilha. Sem susto. Sem bagunça.">
+          <span className="sr-only"> Sem planilha, sem complicação, sem bagunça.</span>
+          <span className="mt-1 block h-[1.08em] overflow-hidden text-[#2bc48a]" aria-hidden="true">
             <span className="word-cycle block" aria-hidden="true">
               <span className="block">Sem planilha.</span>
-              <span className="block">Sem susto.</span>
+              <span className="block">Sem complicação.</span>
               <span className="block">Sem bagunça.</span>
               <span className="block">Sem planilha.</span>
             </span>
@@ -56,9 +57,10 @@ export function LoginHero() {
               <circle cx="360" cy="12" r="4" fill="#2bc48a" style={{ animation: "fade-in 300ms ease 1.5s both" }} />
               <circle cx="360" cy="12" r="4" fill="#2bc48a" className="ping" />
             </svg>
-            <div className="flex gap-2 text-[11px] text-[#9aa39d]">
+            <div className="flex flex-wrap items-center gap-2 text-[11px] text-[#9aa39d]">
               <span className="rounded-md bg-white/5 px-2 py-1">Receitas R$ 8.200</span>
               <span className="rounded-md bg-white/5 px-2 py-1">Despesas R$ 5.613</span>
+              <span className="ml-auto">Valores ilustrativos</span>
             </div>
           </div>
 

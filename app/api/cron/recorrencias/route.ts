@@ -44,6 +44,8 @@ export async function GET(request: NextRequest) {
   }
   // Faxina do limite de tentativas (registros com mais de 1 dia)
   await supabase.rpc("purge_rate_limit_hits");
+  // Registros de acesso: guarda obrigatória de 6 meses (Marco Civil, art. 15), depois apaga
+  await supabase.rpc("purge_access_log");
   // Só contagens no log: nada de dados financeiros
   return NextResponse.json({ rules: data?.length ?? 0, created, failed });
 }

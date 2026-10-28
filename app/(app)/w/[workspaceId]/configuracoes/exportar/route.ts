@@ -20,6 +20,8 @@ const TABLES = [
   "import_batches",
   "import_templates",
   "attachments",
+  "savings_goals",
+  "goal_contributions",
 ] as const;
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ workspaceId: string }> }) {

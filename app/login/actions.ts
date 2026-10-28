@@ -5,6 +5,8 @@ import { createClient } from "@/lib/supabase/server";
 import { safeNext } from "@/lib/safe-next";
 import { weakPasswordReason } from "@/lib/pwned";
 import { rateLimit } from "@/lib/rate-limit";
+import { logAccess } from "@/lib/access-log";
+import { TERMS_VERSION } from "@/lib/legal";
 
 // Autenticação no servidor: o navegador não precisa baixar a biblioteca do Supabase (~100 kB a menos).
 
@@ -33,6 +35,7 @@ export async function authAction(input: {
   password?: string;
   name?: string;
   next?: string;
+  acceptTerms?: boolean;
 }): Promise<AuthResult> {
   const email = String(input.email ?? "").trim().toLowerCase();
   if (!EMAIL.test(email) || email.length > 200) return { ok: false, text: "E-mail inválido" };
@@ -62,20 +65,34 @@ export async function authAction(input: {
   if (!password || password.length > 200) return { ok: false, text: "Informe a senha." };
 
   if (input.mode === "cadastrar") {
+    // Aceite expresso dos Termos e da Política (fica registrado com a versão e a data)
+    if (input.acceptTerms !== true) return { ok: false, text: "Para criar a conta, aceite os Termos de Serviço e a Política de Privacidade." };
     const weak = weakPasswordReason(password);
     if (weak) return { ok: false, text: weak };
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: { emailRedirectTo: callback(next), data: { full_name: String(input.name ?? "").slice(0, 120) } },
+      options: {
+        emailRedirectTo: callback(next),
+        data: {
+          // Nome é opcional (minimização de dados)
+          ...(String(input.name ?? "").trim() ? { full_name: String(input.name).trim().slice(0, 120) } : {}),
+          terms_version: TERMS_VERSION,
+          terms_accepted_at: new Date().toISOString(),
+        },
+      },
     });
     if (error) return { ok: false, text: error.message.includes("registered") ? "Este e-mail já tem conta. Use Entrar." : "Não foi possível criar a conta." };
-    if (data.session) return { ok: true, text: "Conta criada!", redirect: next };
+    if (data.session && data.user) {
+      await logAccess(supabase, data.user.id);
+      return { ok: true, text: "Conta criada!", redirect: next };
+    }
     return { ok: true, text: "Conta criada. Confirme pelo link enviado ao seu e-mail." };
   }
 
-  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  const { data: signed, error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) return { ok: false, text: "E-mail ou senha incorretos." };
+  if (signed.user) await logAccess(supabase, signed.user.id);
   const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
   const needsCode = aal?.nextLevel === "aal2" && aal.currentLevel !== "aal2";
   return { ok: true, text: "Entrando...", redirect: needsCode ? `/login/mfa?next=${encodeURIComponent(next)}` : next };

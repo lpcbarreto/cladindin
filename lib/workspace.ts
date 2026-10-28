@@ -28,7 +28,8 @@ const loadSession = cache(async () => {
   const claims = data?.claims;
   if (!claims?.sub) return { supabase, user: null };
   if (await needsMfa(supabase, claims.aal)) redirect("/login/mfa");
-  return { supabase, user: { id: claims.sub, email: (claims.email as string | undefined) ?? null } };
+  const meta = (claims.user_metadata ?? {}) as { terms_version?: string };
+  return { supabase, user: { id: claims.sub, email: (claims.email as string | undefined) ?? null, termsVersion: meta.terms_version ?? null } };
 });
 
 const loadMemberships = cache(async (userId: string) => {
