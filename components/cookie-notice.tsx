@@ -35,7 +35,7 @@ export function CookieNotice() {
     >
       <p className="flex-1 text-muted">
         Usamos apenas cookies essenciais para manter você conectado e lembrar suas preferências. Não usamos rastreamento nem publicidade.{" "}
-        <Link href="/cookies" className="font-medium text-primary underline-offset-2 hover:underline">
+        <Link href="/cookies" className="font-medium text-primary underline underline-offset-2">
           Saiba mais
         </Link>
       </p>

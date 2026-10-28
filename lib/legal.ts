@@ -18,6 +18,8 @@ export const LEGAL = {
   /** Encarregado pelo tratamento de dados (LGPD art. 41) */
   encarregadoNome: "[NOME DO ENCARREGADO]",
   encarregadoEmail: "[E-MAIL DO ENCARREGADO]",
+  /** Preço e período da assinatura exibidos na página inicial (ex.: "R$ 19,90 por mês") */
+  preco: "[PREÇO E PERÍODO DA ASSINATURA]",
   /** Cidade/UF do foro (Termos de Serviço) */
   foro: "[CIDADE/UF]",
   /** Data da versão atual dos documentos (mude ao alterar o texto) */
@@ -34,6 +36,7 @@ export const LEGAL_LINKS = [
   { href: "/reembolso", label: "Reembolso e cancelamento" },
   { href: "/lgpd", label: "Seus direitos (LGPD)" },
   { href: "/acessibilidade", label: "Acessibilidade" },
+  { href: "/ajuda", label: "Ajuda" },
 ] as const;
 
 /** Campos ainda não preenchidos (mostrados como aviso nas páginas legais). */

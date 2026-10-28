@@ -99,3 +99,5 @@ Antes de abrir o site ao público, preencha os campos entre colchetes em **`lib/
 - Só cookies essenciais; nenhum script de rastreamento. Se um dia incluir analytics, peça consentimento antes de carregar.
 - Auditoria automática de acessibilidade (axe, WCAG 2.1 AA) em `tests/e2e/acessibilidade.spec.ts`.
 - Pedidos LGPD são lidos e respondidos pelo painel do Supabase (tabela `privacy_requests`) em até 15 dias.
+- Documentos internos: `docs/lgpd/registro-de-operacoes.md` (art. 37) e `docs/lgpd/plano-de-incidentes.md` (art. 48).
+- Monitor de disponibilidade: cadastre `https://SEU-SITE/api/saude` num monitor gratuito (ex.: UptimeRobot); responde 200 quando site e banco estão no ar.

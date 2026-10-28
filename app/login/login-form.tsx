@@ -9,9 +9,9 @@ import { authAction } from "./actions";
 type Mode = "entrar" | "cadastrar" | "link";
 const LABELS: Record<Mode, string> = { entrar: "Entrar", cadastrar: "Criar conta", link: "Link mágico" };
 
-export function LoginForm({ next }: { next: string }) {
+export function LoginForm({ next, initialMode = "entrar" }: { next: string; initialMode?: Mode }) {
   const router = useRouter();
-  const [mode, setMode] = useState<Mode>("entrar");
+  const [mode, setMode] = useState<Mode>(initialMode);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
@@ -117,11 +117,11 @@ export function LoginForm({ next }: { next: string }) {
           <input type="checkbox" required checked={accept} onChange={(e) => setAccept(e.target.checked)} className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--primary)]" />
           <span>
             Li e aceito os{" "}
-            <Link href="/termos" target="_blank" className="font-medium text-primary underline-offset-2 hover:underline">
+            <Link href="/termos" target="_blank" className="font-medium text-primary underline underline-offset-2">
               Termos de Serviço
             </Link>{" "}
             e a{" "}
-            <Link href="/privacidade" target="_blank" className="font-medium text-primary underline-offset-2 hover:underline">
+            <Link href="/privacidade" target="_blank" className="font-medium text-primary underline underline-offset-2">
               Política de Privacidade
             </Link>
             . Tenho 18 anos ou mais.

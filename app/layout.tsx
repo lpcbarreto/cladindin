@@ -2,11 +2,15 @@ import type { Metadata, Viewport } from "next";
 import { ServiceWorkerRegister } from "@/components/sw-register";
 import { ErrorReporter } from "@/components/error-reporter";
 import { CookieNotice } from "@/components/cookie-notice";
+import { siteUrl } from "@/lib/site-url";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Cladindin",
-  description: "Gestão financeira pessoal e empresarial",
+  metadataBase: new URL(siteUrl()),
+  title: "Cladindin — suas finanças, num só lugar",
+  description: "Importe extratos, controle contas a pagar, cartões e metas, e veja relatórios claros das suas finanças pessoais e da sua pequena empresa.",
+  openGraph: { type: "website", locale: "pt_BR", siteName: "Cladindin" },
+  twitter: { card: "summary_large_image" },
   appleWebApp: { capable: true, title: "Cladindin", statusBarStyle: "default" },
 };
 

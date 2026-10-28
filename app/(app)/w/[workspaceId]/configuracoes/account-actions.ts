@@ -55,7 +55,7 @@ export async function deleteMyAccount(_prev: FormState, form: FormData): Promise
   if (blocked.length) {
     return {
       ok: false,
-      message: `Você é dono de workspace(s) com outras pessoas: ${blocked.join(", ")}. Remova os outros membros ou exclua esses workspaces antes.`,
+      message: `Você é dono de workspace(s) com outras pessoas: ${blocked.join(", ")}. Torne outra pessoa proprietária (em Configurações › Membros), remova os outros membros ou exclua esses workspaces antes.`,
     };
   }
 

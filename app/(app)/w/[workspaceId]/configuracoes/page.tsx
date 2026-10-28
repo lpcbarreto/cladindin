@@ -1,5 +1,6 @@
 import { loadWorkspaceContext, hasRole, ROLE_LABEL, type Role } from "@/lib/workspace";
-import { changeRole, removeMember, revokeInvite } from "./actions";
+import { changeRole, removeMember, revokeInvite, transferOwnership } from "./actions";
+import { ConfirmButton } from "@/components/confirm-button";
 import { DeleteWorkspaceForm, DemoDataForm, InviteForm, NewWorkspaceForm, NotificationPrefsForm } from "./forms";
 import { SecuritySettings } from "@/components/security-settings";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -60,6 +61,18 @@ export default async function SettingsPage({ params }: { params: Promise<{ works
                       </select>
                       <button className="btn-ghost py-1">Salvar</button>
                     </form>
+                    {current.role === "owner" && (
+                      <form action={transferOwnership}>
+                        <input type="hidden" name="workspaceId" value={workspaceId} />
+                        <input type="hidden" name="id" value={m.user_id} />
+                        <ConfirmButton
+                          message={`Tornar ${profile?.full_name || "este membro"} proprietário de “${current.name}”? Você passa a ser administrador.`}
+                          className="btn-ghost py-1"
+                        >
+                          Tornar proprietário
+                        </ConfirmButton>
+                      </form>
+                    )}
                     <form action={removeMember}>
                       <input type="hidden" name="workspaceId" value={workspaceId} />
                       <input type="hidden" name="id" value={m.user_id} />

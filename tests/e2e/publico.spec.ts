@@ -41,6 +41,17 @@ test.describe("sem login", () => {
     await expect(notice).toBeHidden();
   });
 
+  test("página inicial pública, ajuda, SEO e saúde", async ({ page, request }) => {
+    await page.goto("/");
+    await expect(page.getByRole("heading", { level: 1 })).toContainText("Suas finanças");
+    await expect(page.getByRole("link", { name: "Criar conta" })).toHaveAttribute("href", "/login?modo=cadastrar");
+    await page.goto("/ajuda");
+    await expect(page.getByRole("heading", { name: "Central de Ajuda" })).toBeVisible();
+    expect((await request.get("/robots.txt")).status()).toBe(200);
+    expect((await request.get("/sitemap.xml")).status()).toBe(200);
+    expect((await request.get("/api/saude")).status()).toBe(200);
+  });
+
   test("área logada redireciona para o login e preserva o destino", async ({ page }) => {
     await page.goto("/w/00000000-0000-0000-0000-000000000000/dashboard");
     await expect(page).toHaveURL(/\/login\?next=%2Fw%2F/);

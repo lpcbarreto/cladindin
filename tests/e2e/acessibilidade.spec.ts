@@ -2,7 +2,7 @@ import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 
 // Auditoria automática (WCAG 2.1 A/AA) das páginas públicas, nos temas claro e escuro.
-const PAGES = ["/login", "/termos", "/privacidade", "/cookies", "/reembolso", "/lgpd", "/acessibilidade"];
+const PAGES = ["/", "/ajuda", "/login", "/termos", "/privacidade", "/cookies", "/reembolso", "/lgpd", "/acessibilidade"];
 
 for (const scheme of ["light", "dark"] as const) {
   test.describe(`acessibilidade (${scheme})`, () => {

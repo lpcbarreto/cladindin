@@ -2,7 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { hardenCookie } from "@/lib/supabase/cookies";
 
-const PUBLIC_PATHS = ["/login", "/auth", "/convite", "/api/cron", "/api/erros", "/manifest.webmanifest", "/pwa-icon", "/sw.js", "/offline.html", "/termos", "/privacidade", "/cookies", "/reembolso", "/lgpd", "/acessibilidade"];
+const PUBLIC_PATHS = ["/login", "/auth", "/convite", "/api/cron", "/api/erros", "/manifest.webmanifest", "/pwa-icon", "/sw.js", "/offline.html", "/termos", "/privacidade", "/cookies", "/reembolso", "/lgpd", "/acessibilidade", "/ajuda", "/api/saude", "/robots.txt", "/sitemap.xml", "/opengraph-image"];
 
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({ request });
@@ -25,7 +25,8 @@ export async function middleware(request: NextRequest) {
   const { data } = await supabase.auth.getClaims();
   const user = data?.claims?.sub ? data.claims : null;
   const path = request.nextUrl.pathname;
-  if (!user && !PUBLIC_PATHS.some((p) => path.startsWith(p))) {
+  // "/" é a página inicial pública; as demais rotas públicas são prefixos
+  if (!user && path !== "/" && !PUBLIC_PATHS.some((p) => path.startsWith(p))) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     url.searchParams.set("next", path);

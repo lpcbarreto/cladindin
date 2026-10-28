@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { needsMfa } from "@/lib/mfa";
+import { Landing } from "@/components/landing";
 
 const SHORTCUTS = new Set(["a-pagar", "lancamentos", "projecao", "metas"]);
 
@@ -11,7 +12,8 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ n
   const supabase = await createClient();
   const { data: session } = await supabase.auth.getClaims();
   const user = session?.claims?.sub ? { id: session.claims.sub } : null;
-  if (!user) redirect("/login");
+  // Sem login: página inicial pública
+  if (!user) return <Landing />;
   if (await needsMfa(supabase, session?.claims?.aal)) redirect("/login/mfa");
 
   const { data } = await supabase

@@ -10,9 +10,9 @@ import { LegalFooter } from "@/components/legal-footer";
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ next?: string; erro?: string; excluida?: string }>;
+  searchParams: Promise<{ next?: string; erro?: string; excluida?: string; modo?: string }>;
 }) {
-  const { next, erro, excluida } = await searchParams;
+  const { next, erro, excluida, modo } = await searchParams;
   const safeNext = toSafeNext(next);
   const supabase = await createClient();
   const { data: session } = await supabase.auth.getClaims();
@@ -43,7 +43,7 @@ export default async function LoginPage({
             </p>
           )}
           {erro && <p className="shake rounded-[10px] bg-danger-soft p-3 text-sm text-danger">{erro}</p>}
-          <LoginForm next={safeNext} />
+          <LoginForm next={safeNext} initialMode={modo === "cadastrar" ? "cadastrar" : "entrar"} />
           <LegalFooter compact />
         </div>
       </section>

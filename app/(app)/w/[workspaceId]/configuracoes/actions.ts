@@ -136,3 +136,13 @@ export async function saveNotificationPrefs(_prev: FormState, form: FormData): P
   if (error) return { ok: false, message: dbErrorMessage(error) };
   return { ok: true, message: "Preferências salvas." };
 }
+
+const transferSchema = z.object({ workspaceId: z.string().uuid(), id: z.string().uuid() });
+
+/** Transfere a propriedade do workspace; quem transfere vira administrador. */
+export async function transferOwnership(form: FormData) {
+  const v = transferSchema.parse(Object.fromEntries(form));
+  const supabase = await createClient();
+  await supabase.rpc("transfer_ownership", { p_workspace_id: v.workspaceId, p_new_owner: v.id });
+  revalidatePath(`/w/${v.workspaceId}`, "layout");
+}

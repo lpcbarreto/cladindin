@@ -63,6 +63,9 @@ export default async function WorkspaceLayout({
             <span className="min-w-0 truncate text-xs text-muted">{user.email}</span>
           </div>
           <ThemeToggle showLabels />
+          <a href="/ajuda" target="_blank" className="btn-ghost w-full">
+            Central de Ajuda
+          </a>
           <form action="/auth/sair" method="post">
             <button className="btn-ghost w-full">Sair</button>
           </form>
