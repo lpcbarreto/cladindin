@@ -15,6 +15,7 @@ const NAV = [
   { href: "lancamentos", label: "Lançamentos" },
   { href: "a-pagar", label: "A pagar/receber" },
   { href: "recorrencias", label: "Recorrências" },
+  { href: "planejamento", label: "Planejamento" },
   { href: "projecao", label: "Projeção" },
   { href: "metas", label: "Metas" },
   { href: "importar", label: "Importar" },

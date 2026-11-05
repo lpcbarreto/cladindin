@@ -30,6 +30,11 @@ export const FAQ: Faq[] = [
   },
   {
     topic: "organizar",
+    q: "Como planejo as contas dos próximos meses?",
+    a: "Em Planejamento você vê os próximos 12 meses com tudo o que vai entrar e sair e o saldo previsto ao fim de cada mês. Lá também dá para adicionar contas avulsas (IPVA, matrícula), testar uma compra no simulador “e se” e calcular quanto reservar por mês para contas grandes.",
+  },
+  {
+    topic: "organizar",
     q: "Como funcionam cartões e faturas?",
     a: "Cadastre o cartão com os dias de fechamento e vencimento. Cada compra cai na fatura certa e compras parceladas geram as parcelas futuras. Pague a fatura em Cartões: isso vira uma transferência da conta para o cartão, sem contar a despesa duas vezes.",
   },
