@@ -2,7 +2,9 @@ import { loadWorkspaceContext } from "@/lib/workspace";
 import { WorkspaceSwitcher } from "@/components/workspace-switcher";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { AppNav, type NavGroup } from "@/components/app-nav";
-import { Logo } from "@/components/logo";
+import { Logo, LogoMark } from "@/components/logo";
+import { SidebarShell } from "@/components/sidebar-shell";
+import { todayISO } from "@/lib/finance/dates";
 import { CommandBar } from "@/components/command-bar";
 import { MobileNav } from "@/components/mobile-nav";
 import { UndoToast } from "@/components/undo-toast";
@@ -60,7 +62,15 @@ export default async function WorkspaceLayout({
   params: Promise<{ workspaceId: string }>;
 }) {
   const { workspaceId } = await params;
-  const [{ user, workspaces, current }, undo] = await Promise.all([loadWorkspaceContext(workspaceId), readUndo()]);
+  const [ctx, undo] = await Promise.all([loadWorkspaceContext(workspaceId), readUndo()]);
+  const { user, workspaces, current, supabase } = ctx;
+  // Contador no menu: contas a pagar já vencidas (lançamentos e faturas de cartão)
+  const today = todayISO();
+  const [{ count: lateTx }, { count: lateInv }] = await Promise.all([
+    supabase.from("transactions").select("id", { count: "exact", head: true }).eq("workspace_id", current.id).is("deleted_at", null).eq("status", "planned").eq("type", "expense").is("invoice_id", null).lt("due_date", today),
+    supabase.from("invoice_summaries").select("id", { count: "exact", head: true }).eq("workspace_id", current.id).is("paid_at", null).gt("total_cents", 0).lt("due_date", today),
+  ]);
+  const badges = { "a-pagar": (lateTx ?? 0) + (lateInv ?? 0) };
   const initial = (user.email ?? "?").charAt(0).toUpperCase();
   const base = `/w/${current.id}`;
 
@@ -83,22 +93,33 @@ export default async function WorkspaceLayout({
   );
 
   return (
-    <div className="min-h-dvh md:grid md:grid-cols-[248px_1fr]">
+    <div className="min-h-dvh md:flex">
       <a href="#conteudo" className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[70] focus:rounded-lg focus:bg-surface focus:px-3 focus:py-2 focus:text-sm focus:shadow">
         Pular para o conteúdo
       </a>
 
-      {/* Menu lateral (computador) */}
-      <aside className="hidden flex-col gap-5 border-r border-border bg-surface px-3.5 py-5 md:sticky md:top-0 md:flex md:h-dvh md:overflow-y-auto md:overscroll-contain">
-        <div className="px-2">
-          <Logo size={28} />
+      {/* Menu lateral (computador), recolhível */}
+      <SidebarShell>
+        <div className="flex h-8 items-center gap-2.5 px-1.5">
+          <LogoMark size={28} />
+          <span className="font-display text-[19px] font-semibold tracking-[-0.03em] group-data-[collapsed=true]/side:hidden">cladindin</span>
         </div>
-        <WorkspaceSwitcher workspaces={workspaces} currentId={current.id} />
-        <AppNav base={base} groups={GROUPS} />
-        <div className="mt-auto">{account}</div>
-      </aside>
+        <div className="group-data-[collapsed=true]/side:mt-9 group-data-[collapsed=true]/side:hidden">
+          <WorkspaceSwitcher workspaces={workspaces} currentId={current.id} />
+        </div>
+        <div className="hidden h-9 group-data-[collapsed=true]/side:block" aria-hidden="true" />
+        <AppNav base={base} groups={GROUPS} badges={badges} />
+        <div className="mt-auto group-data-[collapsed=true]/side:hidden">{account}</div>
+        <span
+          className="mx-auto mt-auto hidden h-9 w-9 place-items-center rounded-full bg-surface-2 text-sm font-semibold group-data-[collapsed=true]/side:grid"
+          title={user.email ?? undefined}
+          aria-hidden="true"
+        >
+          {initial}
+        </span>
+      </SidebarShell>
 
-      <div className="flex min-w-0 flex-col">
+      <div className="flex min-w-0 flex-1 flex-col">
         {/* Barra superior: busca e novo lançamento */}
         <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-border bg-background/85 px-4 backdrop-blur md:px-8">
           <span className="md:hidden">
@@ -120,7 +141,7 @@ export default async function WorkspaceLayout({
       <MobileNav base={base}>
         <div className="space-y-5">
           <WorkspaceSwitcher workspaces={workspaces} currentId={current.id} />
-          <AppNav base={base} groups={GROUPS} />
+          <AppNav base={base} groups={GROUPS} badges={badges} />
           {account}
         </div>
       </MobileNav>
