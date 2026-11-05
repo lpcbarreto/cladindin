@@ -29,6 +29,11 @@
   --series-income: #0f9d6e;
   --series-expense: #e4632f;
   --series-balance: #2f6feb;
+  /* Marca: C que cresce */
+  --logo-bg: #111614;
+  --logo-ring: rgba(255, 255, 255, 0.1);
+  --logo-c: #ffffff;
+  --logo-up: #2bc48a;
   color-scheme: light;
 }
 .dark {
@@ -52,6 +57,10 @@
   --series-income: #199e70;
   --series-expense: #d95926;
   --series-balance: #3987e5;
+  --logo-bg: #1c211f;
+  --logo-ring: rgba(255, 255, 255, 0.1);
+  --logo-c: #eef1ef;
+  --logo-up: #2bc48a;
   color-scheme: dark;
 }
 

@@ -5,16 +5,16 @@ export function generateStaticParams() {
   return [{ size: "192" }, { size: "512" }];
 }
 
-/** Ícone PNG do app instalável (a marca: "c" que fecha como moeda, sobre verde). */
+/** Ícone PNG do app instalável: a marca "C que cresce" sobre grafite. */
 export async function GET(_req: Request, { params }: { params: Promise<{ size: string }> }) {
   const { size } = await params;
   const s = size === "192" ? 192 : 512;
   return new ImageResponse(
     (
-      <div style={{ width: s, height: s, background: "#0f9d6e", display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <svg width={s * 0.62} height={s * 0.62} viewBox="10 10 22 20">
-          <path d="M26 14.5a8 8 0 1 0 0 11" fill="none" stroke="#fff" strokeWidth="4" strokeLinecap="round" />
-          <circle cx="29" cy="20" r="2.4" fill="#fff" />
+      <div style={{ width: s, height: s, background: "#111614", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <svg width={s * 0.72} height={s * 0.72} viewBox="8 8 32 32">
+          <path d="M32 15.5A12 12 0 1 0 32 32.5" fill="none" stroke="#fff" strokeWidth="5" strokeLinecap="round" />
+          <path d="M19 28l5-5 4 3 7-8M30 18h5v5" fill="none" stroke="#2bc48a" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       </div>
     ),

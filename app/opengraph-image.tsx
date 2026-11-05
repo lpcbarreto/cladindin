@@ -10,10 +10,10 @@ export default function OgImage() {
     (
       <div style={{ width: "100%", height: "100%", background: "#0c0f0e", color: "#eef1ef", display: "flex", flexDirection: "column", justifyContent: "space-between", padding: 80 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
-          <div style={{ width: 72, height: 72, borderRadius: 20, background: "#0f9d6e", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <svg width="46" height="46" viewBox="10 10 22 20">
-              <path d="M26 14.5a8 8 0 1 0 0 11" fill="none" stroke="#fff" strokeWidth="4" strokeLinecap="round" />
-              <circle cx="29" cy="20" r="2.4" fill="#fff" />
+          <div style={{ width: 72, height: 72, borderRadius: 20, background: "#1c211f", border: "1px solid rgba(255,255,255,0.12)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <svg width="54" height="54" viewBox="8 8 32 32">
+              <path d="M32 15.5A12 12 0 1 0 32 32.5" fill="none" stroke="#eef1ef" strokeWidth="5" strokeLinecap="round" />
+              <path d="M19 28l5-5 4 3 7-8M30 18h5v5" fill="none" stroke="#2bc48a" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </div>
           <div style={{ fontSize: 48, fontWeight: 700, letterSpacing: -2 }}>cladindin</div>
