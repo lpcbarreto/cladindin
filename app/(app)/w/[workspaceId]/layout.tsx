@@ -1,34 +1,56 @@
 import { loadWorkspaceContext } from "@/lib/workspace";
 import { WorkspaceSwitcher } from "@/components/workspace-switcher";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { AppNav } from "@/components/app-nav";
+import { AppNav, type NavGroup } from "@/components/app-nav";
 import { Logo } from "@/components/logo";
 import { CommandBar } from "@/components/command-bar";
+import { MobileNav } from "@/components/mobile-nav";
 import { UndoToast } from "@/components/undo-toast";
 import { readUndo } from "./global-actions";
 import { TermsBanner } from "@/components/terms-banner";
 import { LegalFooter } from "@/components/legal-footer";
 import { TERMS_VERSION } from "@/lib/legal";
 
-const NAV = [
-  { href: "dashboard", label: "Início" },
-  { href: "lancamentos", label: "Lançamentos" },
-  { href: "a-pagar", label: "A pagar/receber" },
-  { href: "recorrencias", label: "Recorrências" },
-  { href: "planejamento", label: "Planejamento" },
-  { href: "projecao", label: "Projeção" },
-  { href: "metas", label: "Metas" },
-  { href: "importar", label: "Importar" },
-  { href: "importacoes", label: "Importações" },
-  { href: "cartoes", label: "Cartões" },
-  { href: "contas", label: "Contas e cartões" },
-  { href: "relatorios", label: "Relatórios" },
-  { href: "orcamento", label: "Orçamento" },
-  { href: "categorias", label: "Categorias" },
-  { href: "regras", label: "Regras" },
-  { href: "contatos", label: "Contatos" },
-  { href: "configuracoes", label: "Configurações" },
+const GROUPS: NavGroup[] = [
+  {
+    title: "Visão geral",
+    items: [
+      { href: "dashboard", label: "Início" },
+      { href: "relatorios", label: "Relatórios" },
+    ],
+  },
+  {
+    title: "Movimentação",
+    items: [
+      { href: "lancamentos", label: "Lançamentos" },
+      { href: "a-pagar", label: "A pagar e receber" },
+      { href: "cartoes", label: "Cartões" },
+      { href: "importar", label: "Importar extrato" },
+      { href: "importacoes", label: "Importações" },
+    ],
+  },
+  {
+    title: "Planejamento",
+    items: [
+      { href: "planejamento", label: "Planejamento" },
+      { href: "recorrencias", label: "Recorrências" },
+      { href: "projecao", label: "Projeção" },
+      { href: "orcamento", label: "Orçamento" },
+      { href: "metas", label: "Metas" },
+    ],
+  },
+  {
+    title: "Cadastros",
+    items: [
+      { href: "contas", label: "Contas e cartões" },
+      { href: "categorias", label: "Categorias" },
+      { href: "regras", label: "Regras" },
+      { href: "contatos", label: "Contatos" },
+      { href: "configuracoes", label: "Configurações" },
+    ],
+  },
 ];
+const NAV = GROUPS.flatMap((g) => g.items);
 
 export default async function WorkspaceLayout({
   children,
@@ -40,45 +62,69 @@ export default async function WorkspaceLayout({
   const { workspaceId } = await params;
   const [{ user, workspaces, current }, undo] = await Promise.all([loadWorkspaceContext(workspaceId), readUndo()]);
   const initial = (user.email ?? "?").charAt(0).toUpperCase();
+  const base = `/w/${current.id}`;
+
+  const account = (
+    <div className="space-y-3">
+      <div className="flex items-center gap-3 rounded-xl border border-border p-2.5">
+        <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-surface-2 text-sm font-semibold text-foreground">{initial}</span>
+        <span className="min-w-0 truncate text-xs text-muted">{user.email}</span>
+      </div>
+      <ThemeToggle showLabels />
+      <div className="grid grid-cols-2 gap-2">
+        <a href="/ajuda" target="_blank" className="btn-ghost">
+          Ajuda
+        </a>
+        <form action="/auth/sair" method="post">
+          <button className="btn-ghost w-full">Sair</button>
+        </form>
+      </div>
+    </div>
+  );
 
   return (
-    <div className="min-h-dvh md:grid md:grid-cols-[260px_1fr]">
+    <div className="min-h-dvh md:grid md:grid-cols-[248px_1fr]">
       <a href="#conteudo" className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[70] focus:rounded-lg focus:bg-surface focus:px-3 focus:py-2 focus:text-sm focus:shadow">
         Pular para o conteúdo
       </a>
-      <aside className="flex flex-col gap-5 border-b border-border bg-surface p-4 md:sticky md:top-0 md:h-dvh md:overflow-y-auto md:overscroll-contain md:border-r md:border-b-0 md:p-5">
-        <div className="flex items-center justify-between">
+
+      {/* Menu lateral (computador) */}
+      <aside className="hidden flex-col gap-5 border-r border-border bg-surface px-3.5 py-5 md:sticky md:top-0 md:flex md:h-dvh md:overflow-y-auto md:overscroll-contain">
+        <div className="px-2">
           <Logo size={28} />
-          <div className="w-32 md:hidden">
-            <ThemeToggle />
-          </div>
         </div>
         <WorkspaceSwitcher workspaces={workspaces} currentId={current.id} />
-        <CommandBar workspaceId={current.id} nav={NAV} />
-        <AppNav base={`/w/${current.id}`} items={NAV} />
-        <div className="mt-auto hidden space-y-3 md:block">
-          <div className="flex items-center gap-3 rounded-xl border border-border p-2.5">
-            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-border bg-surface-2 text-sm font-semibold text-foreground">
-              {initial}
-            </span>
-            <span className="min-w-0 truncate text-xs text-muted">{user.email}</span>
-          </div>
-          <ThemeToggle showLabels />
-          <a href="/ajuda" target="_blank" className="btn-ghost w-full">
-            Central de Ajuda
-          </a>
-          <form action="/auth/sair" method="post">
-            <button className="btn-ghost w-full">Sair</button>
-          </form>
-        </div>
+        <AppNav base={base} groups={GROUPS} />
+        <div className="mt-auto">{account}</div>
       </aside>
-      <main id="conteudo" tabIndex={-1} className="mx-auto w-full max-w-6xl p-4 pb-24 outline-none md:p-8 md:pb-24">
-        {user.termsVersion !== TERMS_VERSION && <TermsBanner firstTime={!user.termsVersion} />}
-        {children}
-        <div className="mt-16">
-          <LegalFooter compact />
+
+      <div className="flex min-w-0 flex-col">
+        {/* Barra superior: busca e novo lançamento */}
+        <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-border bg-background/85 px-4 backdrop-blur md:px-8">
+          <span className="md:hidden">
+            <Logo size={26} />
+          </span>
+          <CommandBar workspaceId={current.id} nav={NAV} />
+        </header>
+
+        <main id="conteudo" tabIndex={-1} className="mx-auto w-full max-w-6xl p-4 pb-28 outline-none md:p-8 md:pb-16">
+          {user.termsVersion !== TERMS_VERSION && <TermsBanner firstTime={!user.termsVersion} />}
+          {children}
+          <div className="mt-16">
+            <LegalFooter compact />
+          </div>
+        </main>
+      </div>
+
+      {/* Celular: barra inferior + menu completo em "Mais" */}
+      <MobileNav base={base}>
+        <div className="space-y-5">
+          <WorkspaceSwitcher workspaces={workspaces} currentId={current.id} />
+          <AppNav base={base} groups={GROUPS} />
+          {account}
         </div>
-      </main>
+      </MobileNav>
+
       {undo?.ws === current.id && <UndoToast key={undo.ids.join()} count={undo.ids.length} />}
     </div>
   );

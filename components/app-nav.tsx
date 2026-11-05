@@ -32,27 +32,36 @@ export function NavIcon({ name }: { name: string }) {
   );
 }
 
-export function AppNav({ base, items }: { base: string; items: { href: string; label: string }[] }) {
+export type NavItem = { href: string; label: string };
+export type NavGroup = { title: string; items: NavItem[] };
+
+export function AppNav({ base, groups, onNavigate }: { base: string; groups: NavGroup[]; onNavigate?: () => void }) {
   const pathname = usePathname();
   return (
-    <nav className="-mx-1 flex gap-1 overflow-x-auto px-1 pb-1 md:mx-0 md:flex-col md:overflow-visible md:px-0">
-      {items.map((item) => {
-        const href = `${base}/${item.href}`;
-        const active = pathname === href || pathname.startsWith(`${href}/`);
-        return (
-          <Link
-            key={item.href}
-            href={href}
-            aria-current={active ? "page" : undefined}
-            className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm whitespace-nowrap transition-colors ${
-              active ? "bg-primary-soft font-semibold text-foreground shadow-[inset_2px_0_0_var(--brand)]" : "font-medium text-muted hover:bg-surface-2 hover:text-foreground"
-            }`}
-          >
-            <NavIcon name={item.href} />
-            {item.label}
-          </Link>
-        );
-      })}
+    <nav aria-label="Menu principal" className="flex flex-col gap-4">
+      {groups.map((g) => (
+        <div key={g.title} className="flex flex-col gap-0.5">
+          <span className="px-3 pb-1 text-[11px] font-semibold tracking-[0.06em] text-muted uppercase">{g.title}</span>
+          {g.items.map((item) => {
+            const href = `${base}/${item.href}`;
+            const active = pathname === href || pathname.startsWith(`${href}/`);
+            return (
+              <Link
+                key={item.href}
+                href={href}
+                onClick={onNavigate}
+                aria-current={active ? "page" : undefined}
+                className={`flex items-center gap-3 rounded-lg px-3 py-[7px] text-sm whitespace-nowrap transition-colors ${
+                  active ? "bg-primary-soft font-semibold text-foreground shadow-[inset_2px_0_0_var(--brand)]" : "font-medium text-muted hover:bg-surface-2 hover:text-foreground"
+                }`}
+              >
+                <NavIcon name={item.href} />
+                {item.label}
+              </Link>
+            );
+          })}
+        </div>
+      ))}
     </nav>
   );
 }

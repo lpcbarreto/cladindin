@@ -52,6 +52,16 @@ test.describe("sem login", () => {
     expect((await request.get("/api/saude")).status()).toBe(200);
   });
 
+  test("política de conteúdo com nonce e security.txt", async ({ request }) => {
+    const res = await request.get("/login");
+    const csp = res.headers()["content-security-policy"] ?? "";
+    expect(csp).toMatch(/script-src[^;]*'nonce-[A-Za-z0-9+/=]+'/);
+    expect(csp).not.toMatch(/script-src[^;]*'unsafe-inline'/);
+    const sec = await request.get("/.well-known/security.txt");
+    expect(sec.status()).toBe(200);
+    expect(await sec.text()).toContain("Contact: mailto:");
+  });
+
   test("área logada redireciona para o login e preserva o destino", async ({ page }) => {
     await page.goto("/w/00000000-0000-0000-0000-000000000000/dashboard");
     await expect(page).toHaveURL(/\/login\?next=%2Fw%2F/);

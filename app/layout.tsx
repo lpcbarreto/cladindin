@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { headers } from "next/headers";
 import { ServiceWorkerRegister } from "@/components/sw-register";
 import { ErrorReporter } from "@/components/error-reporter";
 import { CookieNotice } from "@/components/cookie-notice";
@@ -19,11 +20,13 @@ export const viewport: Viewport = { themeColor: "#0f9d6e" };
 // Aplica o tema antes da pintura para evitar flash
 const themeScript = `try{var t=localStorage.getItem('tema');if(t==='dark'||(!t&&matchMedia('(prefers-color-scheme: dark)').matches))document.documentElement.classList.add('dark')}catch(e){}`;
 
-export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  // Nonce da política de conteúdo (gerado no middleware) para o script do tema
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
   return (
     <html lang="pt-BR" suppressHydrationWarning>
       <head>
-        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+        <script nonce={nonce} dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
       <body className="font-sans antialiased">
         {children}

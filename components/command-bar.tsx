@@ -35,8 +35,6 @@ export function CommandBar({
   } | null>(null);
   const [pending, start] = useTransition();
   const inputRef = useRef<HTMLInputElement>(null);
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
   const base = `/w/${workspaceId}`;
 
   // Acessibilidade: ao fechar, o foco volta para onde estava (botão, campo…)
@@ -74,6 +72,8 @@ export function CommandBar({
       } else if (e.key === "Escape") setMode("closed");
     }
     window.addEventListener("keydown", onKey);
+    const onCommand = (e: Event) => open((e as CustomEvent<"add" | "search">).detail === "search" ? "search" : "add");
+    window.addEventListener("cladindin:comando", onCommand);
     // Atalho "Novo lançamento" do app instalado (?novo=1)
     const url = new URL(window.location.href);
     if (url.searchParams.has("novo")) {
@@ -81,7 +81,10 @@ export function CommandBar({
       window.history.replaceState(null, "", url);
       open("add");
     }
-    return () => window.removeEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("cladindin:comando", onCommand);
+    };
   }, []);
 
   useEffect(() => {
@@ -155,28 +158,24 @@ export function CommandBar({
 
   return (
     <>
-      {mounted &&
-        createPortal(
-          <button
-            type="button"
-            onClick={() => open("add")}
-            aria-label="Lançamento rápido (tecla N)"
-            title="Lançamento rápido (N)"
-            className="fixed right-5 bottom-5 z-40 grid h-14 w-14 place-items-center rounded-full bg-primary text-3xl leading-none font-bold text-primary-fg shadow-lg transition hover:scale-105 active:scale-95"
-          >
-            +
-          </button>,
-          document.body,
-        )}
       <button
         type="button"
         onClick={() => open("search")}
-        className="flex w-full items-center justify-between rounded-full border border-border bg-background px-4 py-2 text-sm text-muted hover:text-foreground"
+        aria-label="Buscar (Ctrl K)"
+        className="flex h-10 min-w-0 flex-1 items-center gap-2.5 rounded-[10px] border border-border bg-surface px-3 text-sm text-muted transition-colors hover:border-border-strong hover:text-foreground md:max-w-md"
       >
-        <span>Buscar…</span>
-        <kbd className="hidden rounded bg-surface-2 px-1.5 text-xs md:inline">
-          Ctrl K
-        </kbd>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" aria-hidden="true" className="shrink-0">
+          <circle cx="11" cy="11" r="7" />
+          <path d="M20 20l-3.5-3.5" />
+        </svg>
+        <span className="flex-1 truncate text-left">Buscar lançamentos, contatos…</span>
+        <kbd className="hidden rounded-[5px] border border-border px-1.5 text-[11px] font-sans md:inline">Ctrl K</kbd>
+      </button>
+      <button type="button" onClick={() => open("add")} className="btn hidden h-10 shrink-0 md:inline-flex">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
+          <path d="M12 5v14M5 12h14" />
+        </svg>
+        Novo lançamento
       </button>
 
       {/* Portal no body: a barra lateral (sticky) criaria um contexto que deixava a janela atrás do conteúdo */}
