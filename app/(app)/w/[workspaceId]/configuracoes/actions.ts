@@ -118,6 +118,7 @@ export async function deleteWorkspace(_prev: ActionState, form: FormData): Promi
 const prefsSchema = z.object({
   dueAlerts: z.string().optional(),
   weeklySummary: z.string().optional(),
+  budgetAlerts: z.string().optional(),
   daysBefore: z.coerce.number().int().min(0).max(7),
 });
 
@@ -130,6 +131,7 @@ export async function saveNotificationPrefs(_prev: FormState, form: FormData): P
     user_id: user.id,
     due_alerts: parsed.data.dueAlerts === "on",
     weekly_summary: parsed.data.weeklySummary === "on",
+    budget_alerts: parsed.data.budgetAlerts === "on",
     days_before: parsed.data.daysBefore,
     updated_at: new Date().toISOString(),
   });

@@ -44,6 +44,7 @@ const txSchema = baseSchema.extend({
   accountId: uuid,
   categoryId: optionalUuid,
   contactId: optionalUuid,
+  costCenterId: optionalUuid,
 });
 
 const transferSchema = baseSchema.extend({
@@ -114,6 +115,7 @@ export async function createTransaction(_prev: FormState, form: FormData): Promi
       paid_date: paid ? v.dueDate : null,
       category_id: v.categoryId,
       contact_id: v.contactId,
+      cost_center_id: v.costCenterId,
     });
     if (error) return { ok: false, message: dbErrorMessage(error) };
   }
@@ -152,6 +154,7 @@ export async function updateTransaction(_prev: FormState, form: FormData): Promi
       paid_date: paidDate,
       category_id: v.categoryId,
       contact_id: v.contactId,
+      cost_center_id: v.costCenterId,
     })
     .eq("id", v.id)
     .eq("workspace_id", v.workspaceId)

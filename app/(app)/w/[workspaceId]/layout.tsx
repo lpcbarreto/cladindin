@@ -27,6 +27,7 @@ const GROUPS: NavGroup[] = [
       { href: "lancamentos", label: "Lançamentos" },
       { href: "a-pagar", label: "A pagar e receber" },
       { href: "cartoes", label: "Cartões" },
+      { href: "conciliacao", label: "Conciliação" },
       { href: "importar", label: "Importar extrato" },
       { href: "importacoes", label: "Importações" },
     ],
@@ -48,6 +49,8 @@ const GROUPS: NavGroup[] = [
       { href: "categorias", label: "Categorias" },
       { href: "regras", label: "Regras" },
       { href: "contatos", label: "Contatos" },
+      { href: "centros-custo", label: "Centros de custo" },
+      { href: "equipe", label: "Equipe e aprovações" },
       { href: "configuracoes", label: "Configurações" },
     ],
   },
@@ -66,11 +69,12 @@ export default async function WorkspaceLayout({
   const { user, workspaces, current, supabase } = ctx;
   // Contador no menu: contas a pagar já vencidas (lançamentos e faturas de cartão)
   const today = todayISO();
-  const [{ count: lateTx }, { count: lateInv }] = await Promise.all([
+  const [{ count: lateTx }, { count: lateInv }, { count: pendingApprovals }] = await Promise.all([
     supabase.from("transactions").select("id", { count: "exact", head: true }).eq("workspace_id", current.id).is("deleted_at", null).eq("status", "planned").eq("type", "expense").is("invoice_id", null).lt("due_date", today),
     supabase.from("invoice_summaries").select("id", { count: "exact", head: true }).eq("workspace_id", current.id).is("paid_at", null).gt("total_cents", 0).lt("due_date", today),
+    supabase.from("transactions").select("id", { count: "exact", head: true }).eq("workspace_id", current.id).eq("approval", "pending").is("deleted_at", null),
   ]);
-  const badges = { "a-pagar": (lateTx ?? 0) + (lateInv ?? 0) };
+  const badges = { "a-pagar": (lateTx ?? 0) + (lateInv ?? 0), equipe: current.role === "owner" || current.role === "admin" ? (pendingApprovals ?? 0) : 0 };
   const initial = (user.email ?? "?").charAt(0).toUpperCase();
   const base = `/w/${current.id}`;
 

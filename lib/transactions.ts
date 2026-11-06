@@ -6,7 +6,7 @@ export type CategoryOption = Option & { kind: "income" | "expense" };
 
 /** Contas, categorias (com pai no nome) e contatos para selects. */
 export async function loadOptions(supabase: SupabaseClient, workspaceId: string) {
-  const [accounts, categories, contacts] = await Promise.all([
+  const [accounts, categories, contacts, costCenters] = await Promise.all([
     supabase.from("accounts").select("id, name").eq("workspace_id", workspaceId).eq("archived", false).order("name"),
     supabase
       .from("categories")
@@ -15,6 +15,7 @@ export async function loadOptions(supabase: SupabaseClient, workspaceId: string)
       .eq("archived", false)
       .order("name"),
     supabase.from("contacts").select("id, name").eq("workspace_id", workspaceId).order("name").limit(500),
+    supabase.from("cost_centers").select("id, name").eq("workspace_id", workspaceId).order("name"),
   ]);
   const cats = categories.data ?? [];
   const byId = new Map(cats.map((c) => [c.id, c]));
@@ -29,10 +30,12 @@ export async function loadOptions(supabase: SupabaseClient, workspaceId: string)
     accounts: (accounts.data ?? []) as Option[],
     categories: categoryOptions,
     contacts: (contacts.data ?? []) as Option[],
+    costCenters: (costCenters.data ?? []) as Option[],
   };
 }
 
 export type TxFilters = {
+  centro?: string;
   mes?: string;
   conta?: string;
   categoria?: string;
@@ -46,7 +49,7 @@ export const PAGE_SIZE = 50;
 const UUID_RE = /^[0-9a-f-]{36}$/i;
 
 export const TX_SELECT =
-  "id, type, direction, amount_cents, description, competence_date, due_date, paid_date, status, transfer_group_id, origin, reconciled, account:accounts(id, name), category:categories(id, name), contact:contacts(id, name), attachments(count)";
+  "id, type, direction, amount_cents, description, competence_date, due_date, paid_date, status, transfer_group_id, origin, reconciled, account:accounts(id, name), category:categories(id, name), contact:contacts(id, name), attachments(count), approval";
 
 export type TxRow = {
   id: string;
@@ -65,6 +68,7 @@ export type TxRow = {
   category: { id: string; name: string } | null;
   contact: { id: string; name: string } | null;
   attachments?: { count: number }[];
+  approval?: "pending" | "approved" | "rejected" | null;
 };
 
 /** Monta a consulta de lançamentos aplicando os filtros da URL (sempre validados). */
@@ -82,6 +86,7 @@ export function buildTxQuery(supabase: SupabaseClient, workspaceId: string, f: T
     .order("created_at", { ascending: false });
 
   if (f.conta && UUID_RE.test(f.conta)) q = q.eq("account_id", f.conta);
+  if (f.centro && UUID_RE.test(f.centro)) q = q.eq("cost_center_id", f.centro);
   if (f.categoria === "sem") q = q.is("category_id", null).neq("type", "transfer");
   else if (f.categoria && UUID_RE.test(f.categoria)) q = q.eq("category_id", f.categoria);
   if (f.tipo === "income" || f.tipo === "expense" || f.tipo === "transfer") q = q.eq("type", f.tipo);

@@ -52,3 +52,17 @@ export async function archiveCategory(form: FormData) {
     .or(`id.eq.${v.id},parent_id.eq.${v.id}`);
   revalidatePath(`/w/${v.workspaceId}/categorias`);
 }
+
+const dreSchema = z.object({
+  workspaceId: uuid,
+  id: uuid,
+  dreLine: z.enum(["", "receita", "deducao", "custo", "despesa", "financeiro", "fora"]),
+});
+
+/** Linha da DRE onde a categoria (e suas subcategorias, se não tiverem a própria) entra. */
+export async function setDreLine(form: FormData) {
+  const v = dreSchema.parse(formObject(form));
+  const { supabase } = await getActionClient();
+  await supabase.from("categories").update({ dre_line: v.dreLine || null }).eq("id", v.id).eq("workspace_id", v.workspaceId);
+  revalidatePath(`/w/${v.workspaceId}/categorias`);
+}

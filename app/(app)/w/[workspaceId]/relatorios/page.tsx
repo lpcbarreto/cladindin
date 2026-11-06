@@ -112,6 +112,9 @@ export default async function ReportsPage({
             <Icon name="receipt" size={16} />
             Imposto de Renda
           </Link>
+          <a href={`${base}/contador?mes=${p.ate}`} className="btn-ghost" title="Lançamentos, centros de custo, comprovantes e DRE do mês em uma planilha">
+            Pacote do contador ({formatMonthBR(p.ate)})
+          </a>
           <a href={`${base}/exportar?${qs({})}`} className="btn-ghost">
             Exportar CSV
           </a>

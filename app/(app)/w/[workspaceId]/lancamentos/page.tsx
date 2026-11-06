@@ -400,6 +400,12 @@ export default async function TransactionsPage({
                           />
                         </span>
                       )}
+                      {r.approval === "pending" && (
+                        <span className="ml-2 rounded-full bg-surface-2 px-2 py-0.5 text-xs font-medium text-muted">Aguardando aprovação</span>
+                      )}
+                      {r.approval === "rejected" && (
+                        <span className="ml-2 rounded-full bg-danger-soft px-2 py-0.5 text-xs font-medium text-danger">Recusado</span>
+                      )}
                       {r.contact && (
                         <span className="block text-xs text-muted">
                           {r.contact.name}

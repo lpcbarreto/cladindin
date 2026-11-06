@@ -53,6 +53,21 @@ ${w.nextWeek.length ? `<p style="font-size:14px;margin:12px 0 4px">Próximos 7 d
   return { subject: "Seu resumo semanal", html: layout("Resumo da semana", body, siteUrl) };
 }
 
+export type BudgetAlert = { workspace: string; category: string; spent: number; budget: number };
+
+export function budgetEmail(items: BudgetAlert[], siteUrl: string) {
+  const over = items.filter((i) => i.spent > i.budget).length;
+  const title = over ? `${over} categoria(s) passaram do orçamento` : "Orçamento perto do limite";
+  const body = `<table style="width:100%;border-collapse:collapse;font-size:14px">${items
+    .map((i) => {
+      const pct = Math.round((i.spent / i.budget) * 100);
+      return `<tr style="border-top:1px solid #e6ebe4"><td style="padding:8px 0">${esc(i.category)}<br><span style="font-size:12px;color:#6b776f">${esc(i.workspace)}</span></td>
+<td style="padding:8px 0;text-align:right;white-space:nowrap"><b style="color:${pct > 100 ? "#c4461a" : "#a16207"}">${pct}%</b><br><span style="font-size:12px;color:#6b776f">${formatBRL(i.spent)} de ${formatBRL(i.budget)}</span></td></tr>`;
+    })
+    .join("")}</table>`;
+  return { subject: title, html: layout(title, body, siteUrl) };
+}
+
 /** Envia pelo Resend (https://resend.com). Sem RESEND_API_KEY, não envia nada. */
 export async function sendEmail(to: string, subject: string, html: string): Promise<boolean> {
   const key = process.env.RESEND_API_KEY;

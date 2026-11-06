@@ -81,7 +81,7 @@ export function DemoDataForm({ workspaceId }: { workspaceId: string }) {
   );
 }
 
-export function NotificationPrefsForm({ prefs }: { prefs: { due_alerts: boolean; weekly_summary: boolean; days_before: number } }) {
+export function NotificationPrefsForm({ prefs }: { prefs: { due_alerts: boolean; weekly_summary: boolean; budget_alerts?: boolean; days_before: number } }) {
   const [state, action, pending] = useActionState(saveNotificationPrefs, null);
   return (
     <form action={action} className="space-y-3 text-sm">
@@ -99,8 +99,13 @@ export function NotificationPrefsForm({ prefs }: { prefs: { due_alerts: boolean;
       </label>
       <label className="flex items-center gap-2">
         <input type="checkbox" name="weeklySummary" defaultChecked={prefs.weekly_summary} />
-        Resumo semanal toda segunda-feira
+        Resumo semanal toda segunda-feira (a pagar, a receber, atrasados e saldo previsto)
       </label>
+      <label className="flex items-center gap-2">
+        <input type="checkbox" name="budgetAlerts" defaultChecked={prefs.budget_alerts ?? true} />
+        Avisar quando uma categoria passar de 80% do orçamento do mês
+      </label>
+      <p className="text-xs text-muted">A fatura do cartão entra nos avisos de vencimento, com a mesma antecedência.</p>
       <div className="flex items-center gap-3">
         <button className="btn-ghost" disabled={pending}>
           Salvar avisos

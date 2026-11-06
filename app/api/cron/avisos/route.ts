@@ -1,7 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { addDays, todayISO } from "@/lib/finance/dates";
-import { dueEmail, sendEmail, weeklyEmail, type DueItem, type WeeklyData } from "@/lib/notify";
+import { addDays, monthRange, todayISO } from "@/lib/finance/dates";
+import { budgetEmail, dueEmail, sendEmail, weeklyEmail, type BudgetAlert, type DueItem, type WeeklyData } from "@/lib/notify";
+import { loadBudget } from "@/lib/budget-server";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -27,7 +28,7 @@ export async function GET(request: NextRequest) {
 
   const [{ data: members }, { data: prefs }, { data: sent }] = await Promise.all([
     db.from("workspace_members").select("user_id, workspace_id, workspace:workspaces(name)"),
-    db.from("notification_prefs").select("user_id, due_alerts, days_before, weekly_summary"),
+    db.from("notification_prefs").select("user_id, due_alerts, days_before, weekly_summary, budget_alerts"),
     db.from("notification_log").select("user_id, kind").eq("ref_date", today),
   ]);
   const prefOf = new Map((prefs ?? []).map((p) => [p.user_id, p]));
@@ -41,12 +42,14 @@ export async function GET(request: NextRequest) {
 
   let dueSent = 0;
   let weeklySent = 0;
+  let budgetSent = 0;
   let failed = 0;
   for (const [userId, workspaces] of byUser) {
-    const pref = prefOf.get(userId) ?? { due_alerts: true, days_before: 1, weekly_summary: true };
+    const pref = prefOf.get(userId) ?? { due_alerts: true, days_before: 1, weekly_summary: true, budget_alerts: true };
     const wantDue = pref.due_alerts && !already.has(`${userId}:due`);
     const wantWeekly = isMonday && pref.weekly_summary && !already.has(`${userId}:weekly`);
-    if (!wantDue && !wantWeekly) continue;
+    const wantBudget = pref.budget_alerts !== false;
+    if (!wantDue && !wantWeekly && !wantBudget) continue;
     try {
       const { data: u } = await db.auth.admin.getUserById(userId);
       const email = u.user?.email;
@@ -146,10 +149,33 @@ export async function GET(request: NextRequest) {
           } else failed++;
         }
       }
+
+      if (wantBudget) {
+        const month = today.slice(0, 7);
+        const monthStart = monthRange(month).start;
+        const { data: logged } = await db.from("budget_alert_log").select("category_id, level").eq("user_id", userId).eq("month", monthStart);
+        const done = new Set((logged ?? []).map((l) => `${l.category_id}:${l.level}`));
+        const alerts: (BudgetAlert & { categoryId: string; level: "attention" | "over" })[] = [];
+        for (const w of workspaces) {
+          for (const r of await loadBudget(db, w.id, month)) {
+            if (!r.budget || r.spent < r.budget * 0.8) continue;
+            const level = r.spent > r.budget ? "over" : "attention";
+            if (done.has(`${r.categoryId}:${level}`)) continue;
+            alerts.push({ workspace: w.name, category: r.name, spent: r.spent, budget: r.budget, categoryId: r.categoryId, level });
+          }
+        }
+        if (alerts.length) {
+          const e = budgetEmail(alerts, siteUrl);
+          if (await sendEmail(email, e.subject, e.html)) {
+            await db.from("budget_alert_log").insert(alerts.map((a) => ({ user_id: userId, category_id: a.categoryId, month: monthStart, level: a.level })));
+            budgetSent++;
+          } else failed++;
+        }
+      }
     } catch {
       failed++;
     }
   }
   // Só contagens no log: nada de dados financeiros nem e-mails
-  return NextResponse.json({ users: byUser.size, dueSent, weeklySent, failed });
+  return NextResponse.json({ users: byUser.size, dueSent, weeklySent, budgetSent, failed });
 }

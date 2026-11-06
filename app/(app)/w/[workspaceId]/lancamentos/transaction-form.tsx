@@ -16,6 +16,7 @@ type Initial = {
   accountId: string;
   categoryId: string;
   contactId: string;
+  costCenterId?: string;
   notes: string;
   refund?: boolean;
 };
@@ -27,7 +28,7 @@ export function TransactionForm({
   initial,
 }: {
   workspaceId: string;
-  options: { accounts: Option[]; categories: CategoryOption[]; contacts: Option[] };
+  options: { accounts: Option[]; categories: CategoryOption[]; contacts: Option[]; costCenters?: Option[] };
   defaultDate: string;
   initial?: Initial;
 }) {
@@ -128,6 +129,19 @@ export function TransactionForm({
               ))}
             </select>
           </label>
+          {(options.costCenters?.length ?? 0) > 0 && (
+            <label className="text-sm">
+              Centro de custo
+              <select name="costCenterId" defaultValue={initial?.costCenterId ?? ""} className="input mt-1">
+                <option value="">Nenhum</option>
+                {options.costCenters!.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
           <label className="text-sm">
             Competência
             <input name="competenceDate" type="date" defaultValue={initial?.competenceDate} className="input mt-1" />

@@ -3,6 +3,7 @@ import { changeRole, removeMember, revokeInvite, transferOwnership } from "./act
 import { ConfirmButton } from "@/components/confirm-button";
 import { DeleteWorkspaceForm, DemoDataForm, InviteForm, NewWorkspaceForm, NotificationPrefsForm } from "./forms";
 import { SecuritySettings } from "@/components/security-settings";
+import { DevicesList } from "@/components/devices-list";
 import { ThemeToggle } from "@/components/theme-toggle";
 import Link from "next/link";
 import { DeleteAccountForm, ProfileNameForm } from "./account-forms";
@@ -28,7 +29,7 @@ export default async function SettingsPage({ params }: { params: Promise<{ works
     : { data: [] };
 
   const [{ data: prefs }, { data: profile }] = await Promise.all([
-    supabase.from("notification_prefs").select("due_alerts, weekly_summary, days_before").eq("user_id", user.id).maybeSingle(),
+    supabase.from("notification_prefs").select("due_alerts, weekly_summary, budget_alerts, days_before").eq("user_id", user.id).maybeSingle(),
     supabase.from("profiles").select("full_name").eq("id", user.id).maybeSingle(),
   ]);
 
@@ -115,12 +116,15 @@ export default async function SettingsPage({ params }: { params: Promise<{ works
       <section className="card space-y-3">
         <h2 className="font-medium">Avisos por e-mail</h2>
         <p className="text-sm text-muted">Enviados para {user.email}. Valem para todos os seus workspaces.</p>
-        <NotificationPrefsForm prefs={prefs ?? { due_alerts: true, weekly_summary: true, days_before: 1 }} />
+        <NotificationPrefsForm prefs={prefs ?? { due_alerts: true, weekly_summary: true, budget_alerts: true, days_before: 1 }} />
       </section>
 
       <section className="card space-y-3">
         <h2 className="font-medium">Segurança</h2>
         <SecuritySettings />
+        <div className="border-t border-border pt-4">
+          <DevicesList />
+        </div>
       </section>
 
       <section className="card space-y-3">
@@ -157,7 +161,7 @@ export default async function SettingsPage({ params }: { params: Promise<{ works
             Baixar dados da minha conta (JSON)
           </a>
           <a href={`/w/${workspaceId}/configuracoes/exportar`} className="btn-ghost">
-            Baixar dados de “{current.name}” (JSON)
+            Baixar cópia completa de “{current.name}” (JSON)
           </a>
         </div>
         {current.role === "owner" && (

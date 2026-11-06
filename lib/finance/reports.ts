@@ -10,7 +10,7 @@ export type ReportTx = {
   competence_date: string;
   due_date: string;
   paid_date: string | null;
-  category: { name: string; parent: { name: string } | null } | null;
+  category: { name: string; dre_line?: DreLine | null; parent: { name: string; dre_line?: DreLine | null } | null } | null;
   contact: { name: string } | null;
   cost_center: { name: string } | null;
 };
@@ -124,6 +124,31 @@ export function categoryByMonth(txs: ReportTx[], months: string[], kind: "income
     .sort((a, b) => b.total - a.total);
 }
 
+/** Linha da DRE escolhida na categoria (sobrepõe a regra pelo nome). */
+export type DreLine = "receita" | "deducao" | "custo" | "despesa" | "financeiro" | "fora";
+export const DRE_LINE_LABELS: Record<DreLine, string> = {
+  receita: "Receita operacional",
+  deducao: "Impostos sobre a receita",
+  custo: "Custos",
+  despesa: "Despesas administrativas",
+  financeiro: "Resultado financeiro",
+  fora: "Não entra na DRE",
+};
+const lineFromChoice = (choice: DreLine, kind: "income" | "expense"): string | null =>
+  choice === "fora"
+    ? null
+    : choice === "receita"
+      ? "Receita operacional"
+      : choice === "deducao"
+        ? "(−) Impostos sobre receita"
+        : choice === "custo"
+          ? "(−) Custos"
+          : choice === "despesa"
+            ? "(−) Despesas administrativas"
+            : kind === "income"
+              ? "(+) Receitas financeiras"
+              : "(−) Despesas financeiras";
+
 // DRE simplificado: cada linha agrupa categorias principais pelo nome (categorias padrão PJ)
 const DRE_LINES: { label: string; kind: "income" | "expense"; match: RegExp }[] = [
   { label: "Receita operacional", kind: "income", match: /receita operacional|vendas|servi/i },
@@ -145,9 +170,14 @@ export function dre(txs: ReportTx[]): DreRow[] {
   for (const t of txs) {
     if (t.status !== "paid") continue;
     const top = t.category ? (t.category.parent?.name ?? t.category.name) : "";
-    const line = DRE_LINES.find((l) => l.kind === t.type && l.match.test(top));
+    const choice = t.category?.dre_line ?? t.category?.parent?.dre_line ?? null;
+    if (choice === "fora") continue;
+    const label = choice ? lineFromChoice(choice, t.type) : DRE_LINES.find((l) => l.kind === t.type && l.match.test(top))?.label;
+    // Receita marcada como dedução/custo (ou despesa como receita) entra com o sinal da natureza da linha
     const v = t.type === "income" ? signed(t) : -signed(t);
-    if (line) totals.set(line.label, (totals.get(line.label) ?? 0) + v);
+    const lineIsIncome = label === "Receita operacional" || label === "(+) Receitas financeiras";
+    const val = lineIsIncome === (t.type === "income") ? v : -v;
+    if (label) totals.set(label, (totals.get(label) ?? 0) + val);
     else if (t.type === "income") otherIncome += v;
     else otherExpense += v;
   }

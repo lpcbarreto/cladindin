@@ -1,8 +1,9 @@
 import { loadWorkspaceContext, hasRole } from "@/lib/workspace";
 import { archiveCategory, renameCategory } from "./actions";
 import { CategoryForm } from "./category-form";
+import { DreSelect } from "./dre-select";
 
-type Cat = { id: string; name: string; kind: "income" | "expense"; parent_id: string | null; archived: boolean };
+type Cat = { id: string; name: string; kind: "income" | "expense"; parent_id: string | null; archived: boolean; dre_line: string | null };
 
 export default async function CategoriesPage({ params }: { params: Promise<{ workspaceId: string }> }) {
   const { workspaceId } = await params;
@@ -11,7 +12,7 @@ export default async function CategoriesPage({ params }: { params: Promise<{ wor
 
   const { data } = await supabase
     .from("categories")
-    .select("id, name, kind, parent_id, archived")
+    .select("id, name, kind, parent_id, archived, dre_line")
     .eq("workspace_id", workspaceId)
     .order("name");
   const all = (data ?? []) as Cat[];
@@ -42,7 +43,10 @@ export default async function CategoriesPage({ params }: { params: Promise<{ wor
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-extrabold tracking-tight">Categorias</h1>
+      <div>
+        <h1 className="text-3xl font-extrabold tracking-tight">Categorias</h1>
+        <p className="mt-1 text-sm text-muted">Ao lado de cada categoria principal, escolha em que linha da DRE ela entra (por padrão, o site decide pelo nome).</p>
+      </div>
       {canEdit && (
         <section className="card space-y-3">
           <h2 className="font-medium">Nova categoria</h2>
@@ -71,6 +75,7 @@ function Row({ cat, workspaceId, canEdit, bold }: { cat: Cat; workspaceId: strin
           className={`w-full rounded bg-transparent px-1 hover:bg-background focus:bg-background ${bold ? "font-medium" : ""}`}
         />
       </form>
+      {bold && <DreSelect workspaceId={workspaceId} id={cat.id} value={cat.dre_line} />}
       <form action={archiveCategory}>
         <input type="hidden" name="workspaceId" value={workspaceId} />
         <input type="hidden" name="id" value={cat.id} />

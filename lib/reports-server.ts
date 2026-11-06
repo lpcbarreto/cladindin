@@ -3,7 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { ReportTx } from "@/lib/finance/reports";
 
 const SELECT =
-  "type, direction, amount_cents, status, competence_date, due_date, paid_date, account_id, category:categories!category_id(name, parent:parent_id(name)), contact:contacts!contact_id(name), cost_center:cost_centers!cost_center_id(name)";
+  "type, direction, amount_cents, status, competence_date, due_date, paid_date, account_id, category:categories!category_id(name, dre_line, parent:parent_id(name, dre_line)), contact:contacts!contact_id(name), cost_center:cost_centers!cost_center_id(name)";
 
 /** Lançamentos de receita/despesa que tocam o período em qualquer data (competência, vencimento ou pagamento). */
 export async function loadReportTx(

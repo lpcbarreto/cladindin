@@ -51,6 +51,7 @@ export default async function EditTransactionPage({ params }: { params: Promise<
             accountId: tx.account_id,
             categoryId: tx.category_id ?? "",
             contactId: tx.contact_id ?? "",
+            costCenterId: tx.cost_center_id ?? "",
             notes: tx.notes ?? "",
             refund: tx.type === "expense" && tx.direction === 1,
           }}
