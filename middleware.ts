@@ -3,9 +3,16 @@ import { NextResponse, type NextRequest } from "next/server";
 import { hardenCookie } from "@/lib/supabase/cookies";
 import { buildCsp, makeNonce } from "@/lib/csp";
 
-const PUBLIC_PATHS = ["/login", "/auth", "/convite", "/api/cron", "/api/erros", "/manifest.webmanifest", "/pwa-icon", "/sw.js", "/offline.html", "/termos", "/privacidade", "/cookies", "/reembolso", "/lgpd", "/acessibilidade", "/ajuda", "/api/saude", "/robots.txt", "/sitemap.xml", "/opengraph-image", "/.well-known"];
+const PUBLIC_PATHS = ["/login", "/auth", "/convite", "/api/cron", "/api/erros", "/manifest.webmanifest", "/pwa-icon", "/sw.js", "/fora-do-ar.html", "/termos", "/privacidade", "/cookies", "/reembolso", "/lgpd", "/acessibilidade", "/ajuda", "/api/saude", "/robots.txt", "/sitemap.xml", "/opengraph-image", "/.well-known"];
 
 export async function middleware(request: NextRequest) {
+  // Modo manutenção (variável MANUTENCAO=1 na Vercel): todas as páginas mostram "Voltamos já"
+  if (process.env.MANUTENCAO === "1" && !request.nextUrl.pathname.startsWith("/api/")) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/fora-do-ar.html";
+    url.search = "";
+    return NextResponse.rewrite(url, { status: 503, headers: { "Retry-After": "300" } });
+  }
   // Nonce novo a cada requisição: o Next marca os próprios scripts com ele (lendo o CSP da requisição)
   const nonce = makeNonce();
   const csp = buildCsp(nonce);

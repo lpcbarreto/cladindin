@@ -9,6 +9,9 @@ export const dynamic = "force-dynamic";
  */
 export async function GET() {
   const started = Date.now();
+  if (process.env.MANUTENCAO === "1") {
+    return NextResponse.json({ status: "manutencao" }, { status: 503, headers: { "Cache-Control": "no-store" } });
+  }
   try {
     const db = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, { auth: { persistSession: false } });
     // Consulta vazia (sem login o RLS não devolve linhas): só confirma que o banco responde

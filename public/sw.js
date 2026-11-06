@@ -1,7 +1,7 @@
 // Service worker do Cladindin: só guarda os arquivos estáticos do app.
 // Dados financeiros nunca vão para o cache: páginas e APIs sempre vêm da rede.
-const CACHE = "cladindin-v1";
-const OFFLINE = "/offline.html";
+const CACHE = "cladindin-v2";
+const OFFLINE = "/fora-do-ar.html";
 
 self.addEventListener("install", (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll([OFFLINE, "/pwa-icon/192"])));
@@ -19,7 +19,12 @@ self.addEventListener("fetch", (e) => {
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;
   if (req.mode === "navigate") {
-    e.respondWith(fetch(req).catch(() => caches.match(OFFLINE)));
+    // Sem rede ou servidor fora do ar (502/503/504): mostra a tela "Voltamos já" guardada no aparelho
+    e.respondWith(
+      fetch(req)
+        .then((res) => (res.status >= 502 && res.status <= 504 ? caches.match(OFFLINE).then((hit) => hit || res) : res))
+        .catch(() => caches.match(OFFLINE)),
+    );
     return;
   }
   // Arquivos com hash no nome (_next/static) são imutáveis: cache primeiro
