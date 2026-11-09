@@ -6,6 +6,7 @@ import { safeNext } from "@/lib/safe-next";
 import { weakPasswordReason } from "@/lib/pwned";
 import { rateLimit } from "@/lib/rate-limit";
 import { logAccess } from "@/lib/access-log";
+import { recordSecurityEvent } from "@/lib/security-alert";
 import { TERMS_VERSION } from "@/lib/legal";
 
 // Autenticação no servidor: o navegador não precisa baixar a biblioteca do Supabase (~100 kB a menos).
@@ -84,15 +85,18 @@ export async function authAction(input: {
     });
     if (error) return { ok: false, text: error.message.includes("registered") ? "Este e-mail já tem conta. Use Entrar." : "Não foi possível criar a conta." };
     if (data.session && data.user) {
-      await logAccess(supabase, data.user.id);
+      await logAccess(supabase, data.user.id, data.user.email);
       return { ok: true, text: "Conta criada!", redirect: next };
     }
     return { ok: true, text: "Conta criada. Confirme pelo link enviado ao seu e-mail." };
   }
 
   const { data: signed, error } = await supabase.auth.signInWithPassword({ email, password });
-  if (error) return { ok: false, text: "E-mail ou senha incorretos." };
-  if (signed.user) await logAccess(supabase, signed.user.id);
+  if (error) {
+    await recordSecurityEvent("login-falhou");
+    return { ok: false, text: "E-mail ou senha incorretos." };
+  }
+  if (signed.user) await logAccess(supabase, signed.user.id, signed.user.email);
   const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
   const needsCode = aal?.nextLevel === "aal2" && aal.currentLevel !== "aal2";
   return { ok: true, text: "Entrando...", redirect: needsCode ? `/login/mfa?next=${encodeURIComponent(next)}` : next };
@@ -108,7 +112,10 @@ export async function verifyMfaAction(code: string, nextRaw: string): Promise<Au
   const factor = factors?.totp.find((f) => f.status === "verified");
   if (!factor) return { ok: false, text: "Nenhum autenticador encontrado." };
   const { error } = await supabase.auth.mfa.challengeAndVerify({ factorId: factor.id, code: code.replace(/\D/g, "").slice(0, 6) });
-  if (error) return { ok: false, text: "Código inválido. Confira o horário do celular e tente de novo." };
+  if (error) {
+    await recordSecurityEvent("codigo-falhou");
+    return { ok: false, text: "Código inválido. Confira o horário do celular e tente de novo." };
+  }
   return { ok: true, text: "Verificado!", redirect: safeNext(nextRaw) };
 }
 

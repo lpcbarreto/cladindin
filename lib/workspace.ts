@@ -1,4 +1,5 @@
 import { cache } from "react";
+import { recordSecurityEvent } from "@/lib/security-alert";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { needsMfa } from "@/lib/mfa";
@@ -51,6 +52,10 @@ export async function loadWorkspaceContext(workspaceId: string) {
   if (!user) redirect("/login");
   const workspaces = await loadMemberships(user.id);
   const current = workspaces.find((w) => w.id === workspaceId);
-  if (!current) notFound();
+  if (!current) {
+    // Endereço de um espaço que não é da pessoa: conta como sinal de tentativa de acesso indevido
+    await recordSecurityEvent("acesso-negado");
+    notFound();
+  }
   return { supabase, user, workspaces, current };
 }

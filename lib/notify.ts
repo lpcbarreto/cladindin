@@ -68,6 +68,16 @@ export function budgetEmail(items: BudgetAlert[], siteUrl: string) {
   return { subject: title, html: layout(title, body, siteUrl) };
 }
 
+/** Aviso de acesso por um aparelho que a pessoa nunca usou. */
+export function newDeviceEmail(a: { device: string; ip: string | null; when: Date }, siteUrl: string) {
+  const when = a.when.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", dateStyle: "short", timeStyle: "short" });
+  const body = `<p style="font-size:14px">Sua conta do Cladindin foi acessada de um aparelho novo:</p>
+<p style="font-size:14px;background:#f2f4f3;border-radius:10px;padding:12px;margin:12px 0"><b>${esc(a.device)}</b><br>${esc(when)} (horário de Brasília)${a.ip ? `<br>IP ${esc(a.ip)}` : ""}</p>
+<p style="font-size:14px"><b>Foi você?</b> Então está tudo certo, não precisa fazer nada.</p>
+<p style="font-size:14px"><b>Não foi você?</b> Troque sua senha agora e, em Configurações › Segurança, use "Sair de todos os outros aparelhos" e ligue a verificação em duas etapas.</p>`;
+  return { subject: "Novo acesso à sua conta", html: layout("Novo acesso à sua conta", body, siteUrl) };
+}
+
 /** Envia pelo Resend (https://resend.com). Sem RESEND_API_KEY, não envia nada. */
 export async function sendEmail(to: string, subject: string, html: string): Promise<boolean> {
   const key = process.env.RESEND_API_KEY;

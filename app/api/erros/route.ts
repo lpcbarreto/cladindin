@@ -1,5 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { rateLimit } from "@/lib/rate-limit";
+import { after } from "next/server";
+import { recordSecurityEvent } from "@/lib/security-alert";
 
 /** Recebe erros do navegador e registra nos logs da Vercel (sem dados pessoais ou financeiros). */
 export async function POST(request: NextRequest) {
@@ -21,5 +23,6 @@ export async function POST(request: NextRequest) {
   } catch {
     // corpo inválido: ignora
   }
+  after(() => recordSecurityEvent("erros-site"));
   return new NextResponse(null, { status: 204 });
 }

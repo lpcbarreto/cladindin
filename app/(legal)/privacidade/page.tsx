@@ -112,13 +112,16 @@ export default function PrivacyPage() {
       <h2>5. Por quanto tempo guardamos</h2>
       <ul>
         <li>Dados da conta e dos workspaces: enquanto a conta existir. Ao excluir a conta, eles são apagados do banco de dados na hora.</li>
-        <li>Cópias de segurança mantidas pelo provedor do banco podem conter os dados até o fim do ciclo de retenção desse provedor.</li>
-        <li>Registros de acesso: 6 meses, como exige o art. 15 do Marco Civil da Internet; depois disso são apagados automaticamente.</li>
+        <li>Lançamentos excluídos ficam na lixeira por 30 dias (para você poder desfazer) e depois são apagados de vez, junto com os comprovantes.</li>
+        <li>Cópias de segurança diárias, criptografadas e de acesso restrito: guardadas por 14 dias e apagadas automaticamente. As cópias mantidas pelo provedor do banco seguem o ciclo de retenção desse provedor.</li>
+        <li>Registros de acesso (data, hora, IP e tipo de aparelho, como “Chrome no Windows”): 6 meses, como exige o art. 15 do Marco Civil da Internet; depois disso são apagados automaticamente. O tipo de aparelho também serve para avisar você por e-mail quando sua conta é acessada de um aparelho novo.</li>
         <li>Pedidos de privacidade enviados pelo formulário: pelo tempo necessário para atender e comprovar o atendimento.</li>
       </ul>
 
       <h2>6. Como protegemos</h2>
       <ul>
+        <li>Aviso por e-mail quando sua conta é acessada de um aparelho novo, lista de aparelhos conectados e verificação em duas etapas.</li>
+        <li>Monitoramento de sinais de ataque (como muitas tentativas de senha errada), sem guardar dados pessoais nesses registros.</li>
         <li>Conexão sempre criptografada (HTTPS) e criptografia dos dados armazenados oferecida pelo provedor do banco.</li>
         <li>Cada workspace só é visível para seus membros, com a regra aplicada dentro do próprio banco de dados.</li>
         <li>Verificação em duas etapas opcional, recusa de senhas vazadas e limite de tentativas de acesso.</li>

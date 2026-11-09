@@ -23,7 +23,7 @@ export const LEGAL = {
   /** Cidade/UF do foro (Termos de Serviço) */
   foro: "[CIDADE/UF]",
   /** Data da versão atual dos documentos (mude ao alterar o texto) */
-  versao: "2026-10-28",
+  versao: "2026-11-09",
 } as const;
 
 /** Versão aceita no cadastro: mudou o texto dos Termos/Política? Atualize `versao`. */

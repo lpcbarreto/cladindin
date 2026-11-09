@@ -1,13 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { revokeDevice, revokeOtherDevices } from "./devices-actions";
-
-/** Descreve o aparelho a partir do navegador informado, sem guardar nada além do que o login já guarda. */
-function describe(ua: string | null) {
-  if (!ua) return "Aparelho desconhecido";
-  const browser = /Edg\//.test(ua) ? "Edge" : /OPR\//.test(ua) ? "Opera" : /Firefox\//.test(ua) ? "Firefox" : /Chrome\//.test(ua) ? "Chrome" : /Safari\//.test(ua) ? "Safari" : "Navegador";
-  const os = /iPhone|iPad/.test(ua) ? "iPhone/iPad" : /Android/.test(ua) ? "Android" : /Windows/.test(ua) ? "Windows" : /Mac OS X/.test(ua) ? "Mac" : /Linux/.test(ua) ? "Linux" : "";
-  return os ? `${browser} no ${os}` : browser;
-}
+import { describeDevice as describe } from "@/lib/device";
 
 function ago(iso: string) {
   const min = Math.round((Date.now() - Date.parse(iso)) / 60000);
